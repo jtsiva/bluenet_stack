@@ -1,0 +1,1 @@
+This is pure java code (some of which is the same as the BlueNet project) which is used to implement the protocol stack above the BLE layer. This code will handle things such as routing, addressing, message filtering, and message sequencing. The application interface will also be provided here as well.
