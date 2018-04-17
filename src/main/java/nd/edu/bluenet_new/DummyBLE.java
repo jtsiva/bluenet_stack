@@ -1,8 +1,11 @@
 package nd.edu.bluenet_new;
 
+import java.util.*;
+
 public class DummyBLE implements LayerIFace{
 	protected Reader mReadCB;
 	protected Writer mWriteCB;
+	protected Query mQueryCB;
 
 	public void setReadCB (Reader reader) {
 		this.mReadCB = reader;
@@ -10,6 +13,10 @@ public class DummyBLE implements LayerIFace{
 
 	public void setWriteCB (Writer writer) {
 		this.mWriteCB = writer;
+	}
+
+	public void setQueryCB (Query q) {
+		mQueryCB = q;
 	}
 
 	public int read(AdvertisementPayload advPayload) {
@@ -45,6 +52,12 @@ public class DummyBLE implements LayerIFace{
 	}
 
 	public String query(String myQuery) {
-		return new String();
+		String resultString = new String();
+
+		if (Objects.equals(myQuery, "tag")) {
+			resultString = new String("BLE");
+		}
+
+		return resultString;
 	}
 }

@@ -8,6 +8,7 @@ public class LocationManager implements LayerIFace {
 	protected HashMap<String, LocationEntry> mIDLocationTable = null;
 	protected Reader mReadCB;
 	protected Writer mWriteCB;
+	protected Query mQueryCB;
 
 	public LocationManager() {
 		mIDLocationTable = new HashMap<String, LocationEntry>();
@@ -34,10 +35,18 @@ public class LocationManager implements LayerIFace {
 		mWriteCB = writer;
 	}
 
+	public void setQueryCB (Query q) {
+		mQueryCB = q;
+	}
+
 	public int read(AdvertisementPayload advPayload)
 	{
 		Timestamp timestamp = new Timestamp(System.currentTimeMillis());
 		timestamp.getTime();
+
+		if (advPayload.getMsgType() == AdvertisementPayload.LOCATION_UPDATE) {
+
+		}
 
 
 		return 0;
@@ -56,9 +65,29 @@ public class LocationManager implements LayerIFace {
 
 		return -1;
 	}
-	public String query(String myQuery)
-	{
-		return new String();
+	public String query(String myQuery)	{
+		String resultString = new String();
+
+		String[] parts = myQuery.split("\\s+");
+
+		if (Objects.equals(parts[0], "tag")) {
+			resultString = new String("LocMgr");
+		}
+		else if (Objects.equals(parts[0], "inDirection")) {
+			//return "true" or "false"
+			String me = mQueryCB.ask("global.id");
+			System.out.println ("I am " + me);
+
+		}
+		else if (Objects.equals(parts[0], "getLocation")) {
+			//return a string that is:
+			//longitude,latitude 
+
+		}
+		// allow setLocation? Bad from a security standpoint, but simplifies
+		// handling of locations within the stack
+
+		return resultString;
 	}
 
 }

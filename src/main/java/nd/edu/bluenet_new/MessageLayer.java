@@ -6,6 +6,7 @@ public class MessageLayer implements LayerIFace {
 	private final static int SMALL_MSG_MAX = 20;
 	protected Reader mReadCB;
 	protected Writer mWriteCB;
+	protected Query mQueryCB;
 	private byte mMsgIndex;
 
 	public int filterWindowSize = 126;
@@ -36,6 +37,10 @@ public class MessageLayer implements LayerIFace {
 
 	public void setWriteCB (Writer writer) {
 		mWriteCB = writer;
+	}
+
+	public void setQueryCB (Query q) {
+		mQueryCB = q;
 	}
 
 	/*
@@ -92,10 +97,13 @@ public class MessageLayer implements LayerIFace {
 		throw new java.lang.UnsupportedOperationException("Not supported.");
 	}
 
-	public String query(String question) {
-		String res = new String();
+	public String query(String myQuery) {
+		String resultString = new String();
+		if (Objects.equals(myQuery, "tag")) {
+			resultString = new String("MsgLayer");
+		}
 
-		return res;
+		return resultString;
 	}
 
 
