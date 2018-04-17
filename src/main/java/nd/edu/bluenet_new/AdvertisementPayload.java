@@ -86,4 +86,8 @@ public class AdvertisementPayload {
         this.msgType = msgType;
     }
 
+    public int getMsgType () {
+        return msgType;
+    }
+
 }

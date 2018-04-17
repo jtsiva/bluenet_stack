@@ -6,16 +6,14 @@ public class LayerTest {
 
 		System.out.println("setting things up...");
 		Message msg = new Message();
-		//AdvertisementPayload advPayload = new AdvertisementPayload();
 
-		ConnectionLayer connL = new ConnectionLayer();
-		FilterCopies filterCopies = new FilterCopies();
+		MessageLayer msgL = new MessageLayer();
 		DummyBLE dummy = new DummyBLE();
 
 
 		dummy.setReadCB(new Reader() {
 			public int read(AdvertisementPayload advPayload) {
-				return filterCopies.read(advPayload);
+				return msgL.read(advPayload);
 			}
 
 			public int read(Message message) {
@@ -23,16 +21,7 @@ public class LayerTest {
 			}
 		});
 
-		filterCopies.setReadCB(new Reader() {
-			public int read(AdvertisementPayload advPayload) {
-				return connL.read(advPayload);
-			}
-			public int read(Message message) {
-				return -1;
-			}
-		});
-
-		connL.setWriteCB(new Writer() {
+		msgL.setWriteCB(new Writer() {
 			public int write(AdvertisementPayload advPayload) {
 				return dummy.write(advPayload);
 			}
@@ -41,8 +30,9 @@ public class LayerTest {
 			}
 		});
 
-		connL.setReadCB(new Reader() {
+		msgL.setReadCB(new Reader() {
 			public int read(Message message) {
+				//From: https://stackoverflow.com/questions/9655181/how-to-convert-a-byte-array-to-a-hex-string-in-java
 				final  char[] hexArray = "0123456789ABCDEF".toCharArray();
 				byte[] bytes = message.getBytes();
 				char[] hexChars = new char[bytes.length * 2];
@@ -59,7 +49,7 @@ public class LayerTest {
 			}
 		});
 		msg.setData("hello world!");
-		connL.write(msg);
+		msgL.write(msg);
 
 
 	}

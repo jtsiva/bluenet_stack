@@ -35,7 +35,6 @@ public class DummyBLE implements LayerIFace{
 
 		 return status
 		 */
-		 new Throwable().getStackTrace();
 
 		System.out.println("Dummy hit");
 		return read(advPayload);
