@@ -222,5 +222,20 @@ public class LayerTest {
 
 		myQ.ask("LocMgr.setLocation 41.715011 -86.250768");
 		System.out.println("I'm closer to b than a is: " + myQ.ask("LocMgr.inDirection " + a + " " + b));
+	
+
+		
+		//Test the protocol container
+		ProtocolContainer proto = new ProtocolContainer();
+		proto.regCallback(new Result () {
+			public int provide (String src, String data) {
+				System.out.println(src + ": " + data);
+				return 0;
+			}
+		});
+
+		proto.write(MessageLayer.BROADCAST_GROUP, "proto test: hello world!");
+
+
 	}
 }

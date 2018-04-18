@@ -165,8 +165,12 @@ public class LocationManager implements LayerIFace {
 			//latitude longitude
 
 			LocationEntry loc = getLocation(parts[1]);
-			resultString = String.valueOf(loc.mLatitude) + " " + String.valueOf(loc.mLongitude);
-
+			if (loc == null) {
+				resultString = "0.0 0.0";
+			}
+			else {
+				resultString = String.valueOf(loc.mLatitude) + " " + String.valueOf(loc.mLongitude);
+			}
 		}
 		else if (Objects.equals(parts[0], "setLocation")) {
 			// allow setLocation? Bad from a security standpoint, but simplifies
@@ -179,6 +183,11 @@ public class LocationManager implements LayerIFace {
 			loc.mTimestamp = new Timestamp(System.currentTimeMillis());
 
 			mIDLocationTable.put(mID, loc);
+		}
+		else if (Objects.equals(parts[0], "getNeighbors")) {
+			for ( String key : mIDLocationTable.keySet() ) {
+				resultString += key + " ";
+			}
 		}
 		
 
