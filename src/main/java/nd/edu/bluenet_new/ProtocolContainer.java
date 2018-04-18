@@ -19,9 +19,9 @@ public class ProtocolContainer implements BlueNetIFace {
 		//makes life easier to add all layers to an arraylist
 		//order matters here. it is assumed that the topmost layer (first added)
 		//will implement a write that takes Messages and a read that provides Messages
-		mLayers.add(msgL);
-		mLayers.add(locMgr);
-		mLayers.add(dummy);
+		mLayers.add(mMsg);
+		mLayers.add(mLoc);
+		mLayers.add(mBLE);
 
 		mID = mRandString.nextString();
 
@@ -143,10 +143,10 @@ public class ProtocolContainer implements BlueNetIFace {
 		message.setData(input.getBytes());
 
 
-		int result = mLayers[0].write(destID, message);
+		int result = mLayers.get(0).write(destID, message);
 
 		if (0 == result) {
-			result = input.length;
+			result = input.length();
 		}
 
 		return result;
@@ -156,8 +156,11 @@ public class ProtocolContainer implements BlueNetIFace {
 		mResultHandler = resultHandler;
 	}
 
-	public String[] getNeighbors(String id) {
-		throw new java.lang.UnsupportedOperationException("Not implemented yet.");
+	public String[] getNeighbors() {
+		String res = mQuery.ask("LocMgr.getNeighbors");
+		String[] ids = res.split("\\s+");
+
+		return ids;
 	}
 	public String getLocation(String id) {
 		return mQuery.ask("LocMgr.getLocation " + id);
@@ -174,11 +177,11 @@ public class ProtocolContainer implements BlueNetIFace {
 		double lat = 0.0;
 		double lon = 0.0;
 
-		res = mQuery.ask("LocMgr.setLocation " + String.valueOf(lat) + " " + String.valueOf(lon));
+		String res = mQuery.ask("LocMgr.setLocation " + String.valueOf(lat) + " " + String.valueOf(lon));
 	}
 
-	private voide sendUpdate() {
-		res = mQuery.ask ("LocMgr.sendLocation");
+	private void sendUpdate() {
+		String res = mQuery.ask ("LocMgr.sendLocation");
 	}
 
 }

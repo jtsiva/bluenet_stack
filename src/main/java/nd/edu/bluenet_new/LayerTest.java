@@ -221,9 +221,16 @@ public class LayerTest {
 	
 
 		
+		//Test the protocol container
+		ProtocolContainer proto = new ProtocolContainer();
+		proto.regCallback(new Result () {
+			public int provide (String src, String data) {
+				System.out.println(src + ": " + data);
+				return 0;
+			}
+		});
 
-
-
+		proto.write(MessageLayer.BROADCAST_GROUP, "proto test: hello world!");
 
 
 	}

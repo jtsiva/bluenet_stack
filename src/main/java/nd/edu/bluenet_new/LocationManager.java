@@ -184,6 +184,11 @@ public class LocationManager implements LayerIFace {
 
 			mIDLocationTable.put(mID, loc);
 		}
+		else if (Objects.equals(parts[0], "getNeighbors")) {
+			for ( String key : mIDLocationTable.keySet() ) {
+				resultString += key + " ";
+			}
+		}
 		
 
 		return resultString;
