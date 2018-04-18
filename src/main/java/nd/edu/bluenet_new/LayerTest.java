@@ -218,5 +218,13 @@ public class LayerTest {
 
 		myQ.ask("LocMgr.setLocation 41.715011 -86.250768");
 		System.out.println("I'm closer to b than a is: " + myQ.ask("LocMgr.inDirection " + a + " " + b));
+	
+
+		
+
+
+
+
+
 	}
 }

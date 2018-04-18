@@ -1,0 +1,184 @@
+package nd.edu.bluenet_new;
+
+import java.util.*;
+
+public class ProtocolContainer implements BlueNetIFace {
+	private Result mResultHandler = null;
+
+	private ArrayList<LayerIFace> mLayers = new ArrayList<>(); 
+	
+	private MessageLayer mMsg = new MessageLayer();
+	private LocationManager mLoc = new LocationManager();
+	private DummyBLE mBLE = new DummyBLE();
+
+	private Query mQuery;
+	private RandomString mRandString = new RandomString(4);
+	private String mID;
+
+	public ProtocolContainer () {
+		//makes life easier to add all layers to an arraylist
+		//order matters here. it is assumed that the topmost layer (first added)
+		//will implement a write that takes Messages and a read that provides Messages
+		mLayers.add(msgL);
+		mLayers.add(locMgr);
+		mLayers.add(dummy);
+
+		mID = mRandString.nextString();
+
+		mQuery = new Query() {
+			public String ask(String question) {
+				final String TAG_Q = "tag";
+				final int TAG = 0;
+				final int QUERY = 1;
+				/*
+					Questions will be dispatched to specific submodules from here
+					Each question/command must start with a tag word (no periods) followed
+					by a period and then the query:
+					<tag>.<query>
+
+					each submodule (layer) must at least respond to query('tag') with something
+					to identify the layer for dispatching the query
+
+					The top-most module (the one in which this is implemented) can receive
+					queries if it catches the tag 'global'
+
+				*/
+				String[] parts = question.split("\\.", 2);
+
+				String resultString = new String();
+
+				if (Objects.equals("global", parts[TAG])) {
+					if (Objects.equals("id", parts[QUERY])) {
+						resultString = mID;
+					}
+					else if (Objects.equals("reset id", parts[QUERY])) { //id collision detected so regen
+						mID = mRandString.nextString();
+					}
+				}
+				else {
+
+					for (LayerIFace layer: mLayers) {
+						if (Objects.equals(parts[TAG], layer.query(TAG_Q))) {
+							resultString = layer.query(parts[QUERY]);
+						}
+					}
+				}
+
+				return resultString;
+			}
+		};
+
+		for (LayerIFace layer: mLayers) {
+			layer.setQueryCB(mQuery);
+		}
+
+		connectLayers();
+	}
+
+	private void connectLayers() {
+		//Connect the layers together
+
+		//the dummy ble layer get AdvertisementPayloads and passes them to 
+		//the message layer
+		mBLE.setReadCB(new Reader() {
+			public int read(AdvertisementPayload advPayload) {
+				return mMsg.read(advPayload);
+			}
+
+			public int read(String src, Message message) {
+				return -1;
+			}
+		});
+
+		//The message layer writes Messages or AdvertisementPayloads to the 
+		//dummy ble layer
+		mMsg.setWriteCB(new Writer() {
+			public int write(AdvertisementPayload advPayload) {
+				return mBLE.write(advPayload);
+			}
+			public int write(String dest, Message message) {
+				return mBLE.write(dest, message);
+			}
+		});
+
+		//The message layer will hand off messages to this (the top layer) to be printed
+		//However, an AdvertisementPayload is passed up then it is sent to LocationManager
+		//to handle
+		mMsg.setReadCB(new Reader() {
+			public int read(String src, Message message) {
+				
+			    if (mResultHandler != null) {
+			    	mResultHandler.provide(src, new String(message.getData()));
+			    }
+
+				return 0;
+			}
+
+			public int read(AdvertisementPayload advPayload) {
+				return mLoc.read(advPayload);
+			}
+		});
+
+		//The location manager writes (mostly) complete AdvertisementPayloads to the
+		//message layer to complete and send
+		mLoc.setWriteCB(new Writer() {
+			public int write(AdvertisementPayload advPayload) {
+				return mMsg.write(advPayload);
+			}
+			public int write(String dest, Message message) {
+				return -1;
+			}
+		});
+	}
+
+	//***********************************
+	//Interface things to implement
+	//***********************************
+
+	public String getMyID() {
+		return mID;
+	}
+	public int write(String destID, String input) {
+		Message message = new Message();
+		message.setData(input.getBytes());
+
+
+		int result = mLayers[0].write(destID, message);
+
+		if (0 == result) {
+			result = input.length;
+		}
+
+		return result;
+	}
+
+	public void regCallback(Result resultHandler) {
+		mResultHandler = resultHandler;
+	}
+
+	public String[] getNeighbors(String id) {
+		throw new java.lang.UnsupportedOperationException("Not implemented yet.");
+	}
+	public String getLocation(String id) {
+		return mQuery.ask("LocMgr.getLocation " + id);
+	}
+
+	//************************************************
+	//Other functions that need to taken care of here:
+	//--periodically broadcast location updates
+	//--periodically updating this devices location
+	//************************************************
+
+	private void updateLocation() {
+		//get location from Android Location Services
+		double lat = 0.0;
+		double lon = 0.0;
+
+		res = mQuery.ask("LocMgr.setLocation " + String.valueOf(lat) + " " + String.valueOf(lon));
+	}
+
+	private voide sendUpdate() {
+		res = mQuery.ask ("LocMgr.sendLocation");
+	}
+
+}
