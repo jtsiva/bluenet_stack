@@ -41,6 +41,10 @@ public class Message {
         this.data = data.getBytes(StandardCharsets.UTF_8);
     }
 
+    public void setData(byte[] data) {
+        this.data = data;
+    }
+
     public void fromBytes(byte[] message){
         byte header = message[0];
         ttl = (byte)((header & 0b11000000) >>> 6);

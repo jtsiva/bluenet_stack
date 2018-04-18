@@ -7,9 +7,9 @@ public interface LayerIFace{
 	public void setQueryCB (Query q);
 
 	public int read(AdvertisementPayload advPayload);
-	public int read(Message message);
+	public int read(String src, Message message);
 	public int write(AdvertisementPayload advPayload);
-	public int write(Message message);
+	public int write(String dest, Message message);
 	public String query(String myQuery);
 
 }

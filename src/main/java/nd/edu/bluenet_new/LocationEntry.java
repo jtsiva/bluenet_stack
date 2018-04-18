@@ -4,17 +4,17 @@ package nd.edu.bluenet_new;
 import java.sql.Timestamp;
 
 public class LocationEntry {
-	public double mLatitude;
-	public double mLongitude;
+	public float mLatitude;
+	public float mLongitude;
 	public Timestamp mTimestamp;
 
 	public LocationEntry() {
-		mLatitude = 0.0;
-		mLongitude = 0.0;
+		mLatitude = 0.0f;
+		mLongitude = 0.0f;
 		mTimestamp = null;
 	}
 
-	public LocationEntry(double lat, double lon, Timestamp timestamp) {
+	public LocationEntry(float lat, float lon, Timestamp timestamp) {
 		mLatitude = lat;
 		mLongitude = lon;
 		mTimestamp = timestamp;

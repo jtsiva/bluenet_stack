@@ -3,6 +3,7 @@ package nd.edu.bluenet_new;
 import java.util.*;
 
 public class MessageLayer implements LayerIFace {
+	public final static String BROADCAST_GROUP = "0000";
 	private final static int SMALL_MSG_MAX = 20;
 	protected Reader mReadCB;
 	protected Writer mWriteCB;
@@ -53,25 +54,30 @@ public class MessageLayer implements LayerIFace {
 			Double check that message type is correct (only pass up small/reg messages)
 			handle message sequencing?
 		*/
-		System.out.println("CL hit");
+		System.out.println("ML hit");
 		if (isNew(advPayload)) { //no repeats!
 			if (advPayload.getMsgType() == AdvertisementPayload.SMALL_MESSAGE 
 				|| advPayload.getMsgType() == AdvertisementPayload.REGULAR_MESSAGE) { //correct type!
-				return mReadCB.read(advPayload.getMsg());
+				return mReadCB.read(new String(advPayload.getSrcID()), advPayload.getMsg());
+			}
+			else {
+				return mReadCB.read(advPayload);
 			}
 		}
 		
 		return 0;
 	}
 
-	public int write(Message message) {
+	public int write(String dest, Message message) {
 		/*
 			Set up the fields for the advertisement:
 				set message type
 				set msgid
+				set dest id
+				set src id
 				add message to newly created advertisement
 		*/
-		System.out.println("CL hit");
+		System.out.println("ML hit");
 
 		AdvertisementPayload advPayload = new AdvertisementPayload();
 
@@ -82,6 +88,9 @@ public class MessageLayer implements LayerIFace {
 			advPayload.setMsgType(AdvertisementPayload.SMALL_MESSAGE);
 		}
 
+		advPayload.setSrcID(mQueryCB.ask("global.id"));
+		advPayload.setDestID(dest);
+
 		advPayload.setMsgID(mMsgIndex);
 		mMsgIndex++;
 
@@ -90,11 +99,16 @@ public class MessageLayer implements LayerIFace {
 		return mWriteCB.write(advPayload);
 	}
 
-	public int read(Message message) {
+	public int read(String src, Message message) {
 		throw new java.lang.UnsupportedOperationException("Not supported.");
 	}
 	public int write(AdvertisementPayload advPayload) {
-		throw new java.lang.UnsupportedOperationException("Not supported.");
+		// If we receive an AdvertisementPayload, it's safe to assume that all necessary
+		// fields have been filled out except for the msgID which can only be set here.
+		advPayload.setMsgID(mMsgIndex);
+		mMsgIndex++;
+
+		return mWriteCB.write(advPayload);
 	}
 
 	public String query(String myQuery) {

@@ -1,6 +1,7 @@
 package nd.edu.bluenet_new;
 
 import java.util.*;
+import java.nio.ByteBuffer;
 
 public class LayerTest {
 
@@ -15,6 +16,7 @@ public class LayerTest {
 		LocationManager locMgr = new LocationManager();
 		DummyBLE dummy = new DummyBLE();
 
+		//makes life easier to add all layers to an arraylist
 		mLayers.add(msgL);
 		mLayers.add(locMgr);
 		mLayers.add(dummy);
@@ -40,7 +42,7 @@ public class LayerTest {
 					queries if it catches the tag 'global'
 
 				*/
-				String[] parts = question.split("\\.");
+				String[] parts = question.split("\\.", 2);
 
 				String resultString = new String();
 
@@ -65,32 +67,41 @@ public class LayerTest {
 			}
 		};
 
-		msgL.setQueryCB(myQ);
+		// Set the above query handler for all layers
 		locMgr.setQueryCB(myQ);
+		msgL.setQueryCB(myQ);
 		dummy.setQueryCB(myQ);
 
+		//Connect the layers together
 
+		//the dummy ble layer get AdvertisementPayloads and passes them to 
+		//the message layer
 		dummy.setReadCB(new Reader() {
 			public int read(AdvertisementPayload advPayload) {
 				return msgL.read(advPayload);
 			}
 
-			public int read(Message message) {
+			public int read(String src, Message message) {
 				return -1;
 			}
 		});
 
+		//The message layer writes Messages or AdvertisementPayloads to the 
+		//dummy ble layer
 		msgL.setWriteCB(new Writer() {
 			public int write(AdvertisementPayload advPayload) {
 				return dummy.write(advPayload);
 			}
-			public int write(Message message) {
-				return dummy.write(message);
+			public int write(String dest, Message message) {
+				return dummy.write(dest, message);
 			}
 		});
 
+		//The message layer will hand off messages to this (the top layer) to be printed
+		//However, an AdvertisementPayload is passed up then it is sent to LocationManager
+		//to handle
 		msgL.setReadCB(new Reader() {
-			public int read(Message message) {
+			public int read(String src, Message message) {
 				//From: https://stackoverflow.com/questions/9655181/how-to-convert-a-byte-array-to-a-hex-string-in-java
 				final  char[] hexArray = "0123456789ABCDEF".toCharArray();
 				byte[] bytes = message.getBytes();
@@ -103,18 +114,109 @@ public class LayerTest {
 			    System.out.println(hexChars);
 				return 0;
 			}
+
 			public int read(AdvertisementPayload advPayload) {
+				return locMgr.read(advPayload);
+			}
+		});
+
+		//The location manager writes (mostly) complete AdvertisementPayloads to the
+		//message layer to complete and send
+		locMgr.setWriteCB(new Writer() {
+			public int write(AdvertisementPayload advPayload) {
+				return msgL.write(advPayload);
+			}
+			public int write(String dest, Message message) {
 				return -1;
 			}
 		});
+
+		//Example of sending a message to the broadcast group (everyone)
+
 		msg.setData("hello world!");
-		msgL.write(msg);
+		msgL.write(MessageLayer.BROADCAST_GROUP, msg);
+
+		//testing out the basic query framework
 
 		System.out.println(myQ.ask("BLE.tag"));
 		System.out.println(myQ.ask("LocMgr.tag"));
 		System.out.println(myQ.ask("MsgLayer.tag"));
-		System.out.println(myQ.ask("LocMgr.inDirection"));
+
+		// Testing out the location manager a bit more
+		// top: 41.703799, -86.239010
+		// middle: 41.6926321,-86.2445672
+		// bottom: 41.681207, -86.228968
+		// 
+		float latitude = 0.0f;
+		float longitude = 0.0f;
+
+		//set location
+
+		myQ.ask("LocMgr.setLocation 41.6926321 -86.2445672");
+
+		//get location
+
+		System.out.println(myQ.ask("LocMgr.getLocation " + myID));
+
+		//send location update packets (as if from another node)
+
+		String a = randString.nextString();
+		String b = randString.nextString();
+
+		AdvertisementPayload advPayload = new AdvertisementPayload();
+
+		latitude = 41.703799f;
+		longitude = -86.239010f;
+		byte[] lat = ByteBuffer.allocate(4).putFloat(latitude).array();
+		byte[] lon = ByteBuffer.allocate(4).putFloat(longitude).array();
+
+		byte[] header = {(byte)0b11001000};
+		byte[] allBytes = new byte[header.length + lat.length + lon.length];
+		System.arraycopy(header, 0, allBytes,0,header.length);
+		System.arraycopy(lat, 0, allBytes,header.length,lat.length);
+		System.arraycopy(lon, 0, allBytes,header.length+lat.length,lon.length);
+
+		msg.fromBytes(allBytes);
+		advPayload.setMsg (msg);
+		advPayload.setMsgType(AdvertisementPayload.LOCATION_UPDATE);
+		advPayload.setSrcID(a);
+		advPayload.setDestID(MessageLayer.BROADCAST_GROUP);
+		advPayload.setMsgID((byte)0b0);
+
+		System.out.println("sending a");
+		dummy.write(advPayload); //send  update for 'node' a
 
 
+		advPayload = new AdvertisementPayload();
+		latitude = 41.681207f;
+		longitude = -86.228968f;
+		lat = ByteBuffer.allocate(4).putFloat(latitude).array();
+		lon = ByteBuffer.allocate(4).putFloat(longitude).array();
+
+		System.arraycopy(header, 0, allBytes,0,header.length);
+		System.arraycopy(lat, 0, allBytes,header.length,lat.length);
+		System.arraycopy(lon, 0, allBytes,header.length+lat.length,lon.length);
+
+		msg.fromBytes(allBytes);
+		advPayload.setMsg (msg);
+		advPayload.setMsgType(AdvertisementPayload.LOCATION_UPDATE);
+		advPayload.setSrcID(b);
+		advPayload.setDestID(MessageLayer.BROADCAST_GROUP);
+		advPayload.setMsgID((byte)0b0);
+		System.out.println("sending b");
+		dummy.write(advPayload); //send  update for 'node' b
+
+		//get locations
+		System.out.println("a is at: " + myQ.ask("LocMgr.getLocation " + a));
+		System.out.println("b is at: " + myQ.ask("LocMgr.getLocation " + b));
+
+		//see if I am in the direction of the dest node: true!
+
+		System.out.println("I'm closer to b than a is: " + myQ.ask("LocMgr.inDirection " + a + " " + b));
+
+		//see if I am in the direction of the dest node: false!
+
+		myQ.ask("LocMgr.setLocation 41.715011 -86.250768");
+		System.out.println("I'm closer to b than a is: " + myQ.ask("LocMgr.inDirection " + a + " " + b));
 	}
 }

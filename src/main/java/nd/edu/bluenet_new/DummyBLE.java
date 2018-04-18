@@ -24,7 +24,7 @@ public class DummyBLE implements LayerIFace{
 		return mReadCB.read(advPayload);
 	}
 
-	public int read(Message message) {
+	public int read(String src, Message message) {
 		throw new java.lang.UnsupportedOperationException("Not supported.");
 	}
 
@@ -47,7 +47,7 @@ public class DummyBLE implements LayerIFace{
 		return read(advPayload);
 	}
 
-	public int write(Message message) {
+	public int write(String dest, Message message) {
 		throw new java.lang.UnsupportedOperationException("Not supported.");
 	}
 
