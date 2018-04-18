@@ -158,6 +158,10 @@ public class LayerTest {
 
 		System.out.println(myQ.ask("LocMgr.getLocation " + myID));
 
+		//broadcast my own location (will be ignored)
+
+		myQ.ask("LocMgr.sendLocation");
+
 		//send location update packets (as if from another node)
 
 		String a = randString.nextString();

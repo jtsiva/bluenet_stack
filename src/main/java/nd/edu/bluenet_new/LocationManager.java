@@ -112,7 +112,7 @@ public class LocationManager implements LayerIFace {
 		int result = 0;
 
 		if (advPayload.getMsgType() == AdvertisementPayload.LOCATION_UPDATE) {
-			if (!Objects.equals(advPayload.getSrcID(), mID)) { //don't allow spoofed srcID to make change
+			if (!Objects.equals(new String(advPayload.getSrcID()), mID)) { //don't allow spoofed srcID to make change
 
 				result = updateLocation(new String(advPayload.getSrcID()), advPayload.getMsg());
 			}
