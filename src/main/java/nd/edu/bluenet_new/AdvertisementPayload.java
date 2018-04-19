@@ -9,17 +9,17 @@ import java.nio.charset.StandardCharsets;
  */
 
 public class AdvertisementPayload {
-    public final static byte SMALL_MESSAGE = 1;
-    public final static byte REGULAR_MESSAGE = 2;
-    public final static byte LOCATION_UPDATE = 3;
-    //public final static byte GROUP_ADVERTISE = 4;
-    //public final static byte GROUP_QUERY = 5;
-    //public final static byte GROUP_REGISTER = 6;
+    public final static int SMALL_MESSAGE = 0x186A;
+    public final static int REGULAR_MESSAGE = 0x1869;
+    public final static int LOCATION_UPDATE = 0x1868;
+    //public final static byte GROUP_ADVERTISE = 0x186B;
+    //public final static byte GROUP_QUERY = 0x186C;
+    //public final static byte GROUP_REGISTER = 0x186D;
 
     private byte[] srcID = null;
     private byte[] destID = null;
     private byte msgID = 0;
-    private byte msgType = 0;
+    private int msgType = 0;
     private Message msg = null; //only used if msg type is small
 
     @Override
@@ -50,8 +50,11 @@ public class AdvertisementPayload {
     }
 
     public byte[] getBytes(){
-        byte [] data = srcID;
-        return data;
+        byte [] bytes = new byte[9];
+        System.arraycopy(srcID, 0, bytes,0,srcID.length);
+        System.arraycopy(destID, 0, bytes,srcID.length,destID.length);
+        bytes[8] = msgID;
+        return bytes;
     }
 
     public void setSrcID(String srcID){
@@ -82,7 +85,7 @@ public class AdvertisementPayload {
         return msg;
     }
 
-    public void setMsgType (byte msgType) {
+    public void setMsgType (int msgType) {
         this.msgType = msgType;
     }
 
