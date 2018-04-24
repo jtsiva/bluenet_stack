@@ -171,6 +171,25 @@ public class ProtocolContainer implements BlueNetIFace {
 		return mQuery.ask("LocMgr.getLocation " + id);
 	}
 
+	public Group [] getGroups()	{
+		return new Group()[1];
+	}
+
+	public void addGroup(String name) {
+
+	}
+
+	public void addGroup(float lat, float lon, float rad) {
+
+	}
+	public boolean joinGroup(String id) {
+		return false;
+	}
+
+	public boolean leaveGroup(String id) {
+		return false;
+	}
+
 	//************************************************
 	//Other functions that need to taken care of here:
 	//--periodically broadcast location updates
