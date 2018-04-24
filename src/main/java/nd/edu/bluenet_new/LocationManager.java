@@ -92,6 +92,55 @@ public class LocationManager implements LayerIFace {
 		return mIDLocationTable.get(id);
 	}
 
+	private boolean shouldPass(String id) {
+		/*
+			Implement policy to determine whether the location update from
+			the given ID should be forwarded. We do not want a broadcast
+			storm of location updates.
+
+			Here we implement a simple policy in which the farther we are from
+			the source of the location update, the longer we will wait between
+			location updates to forward	an update. The forwarding is 
+			non-directional, but with message filtering in place, messages back
+			in the direction of the sender will be dropped because they will 
+			have already been seen.
+
+			The distance thresholds will likely need to be adjusted 
+
+		*/
+
+
+		final long CLOSE_T_THRESHOLD = 2000; //millis
+		final float CLOSE_D_THRESHOLD = 5.0f; //meters
+		final long INTERMEDIATE_T_THRESHOLD = 5000;
+		final float INTERMEDIATE_D_THRESHOLD = 15.0f;
+		final long FAR_T_THRESHOLD = 7000;
+		final float FAR_D_THRESHOLD = 50.0f;
+		final long VERY_FAR_T_THRESHOLD = 11000;
+
+		LocationEntry otherLoc = mIDLocationTable.get(id);
+		LocationEntry myLoc = mIDLocationTable.get(mID);
+
+		if (null == otherLoc.mLastForward) {
+			otherLoc.mLastForward = new Timestamp(System.currentTimeMillis());
+		}
+
+		double dist = distance(myLoc.mLatitude, myLoc.mLongitude, otherLoc.mLatitude, otherLoc.mLongitude);
+	
+		long now = System.currentTimeMillis();
+		boolean result = (distance < CLOSE_D_THRESHOLD && (now - otherLoc.mTimestamp.getTime()) > CLOSE_T_THRESHOLD) ||
+						(distance > CLOSE_D_THRESHOLD && distance < INTERMEDIATE_D_THRESHOLD && ((now - otherLoc.mTimestamp.getTime()) > INTERMEDIATE_T_THRESHOLD)) ||
+						(distance > INTERMEDIATE_D_THRESHOLD && distance < FAR_D_THRESHOLD && ((now - otherLoc.mTimestamp.getTime()) > FAR_T_THRESHOLD)) ||
+						(distance > FAR_D_THRESHOLD && (now - otherLoc.mTimestamp.getTime()) > VERY_FAR_T_THRESHOLD);
+	
+		if (result) {
+			otherLoc.mLastForward = new Timestamp(now);
+			mIDLocationTable.put(id, otherLoc);
+		}
+
+		return result;
+	}
+
 
 	public void setReadCB (Reader reader) {
 		mReadCB = reader;
@@ -117,13 +166,14 @@ public class LocationManager implements LayerIFace {
 				result = updateLocation(new String(advPayload.getSrcID()), advPayload.getMsg());
 			}
 		}
-		else
-		{
-			//don't know what to do with it, so pass it on
+
+		//check to see if this location is eligible for forwarding
+		//in other words, should we pass this on to the routing layer
+		if (shouldPass(advPayload.getSrcID())) {
+			//someone else might need this, so pass it on
 			result = mReadCB.read(advPayload);
 		}
-
-
+		
 		return result;
 	}
 

@@ -108,6 +108,12 @@ public class MessageLayer implements LayerIFace {
 		advPayload.setMsgID(mMsgIndex);
 		mMsgIndex++;
 
+		//If we are sending a location update then we want to append a 2 byte checksum
+		//for the group table.
+		if (advPayload.getMsgType() == AdvertisementPayload.LOCATION_UPDATE) {
+			//append checksum in last two bytes
+		}
+
 		return mWriteCB.write(advPayload);
 	}
 
