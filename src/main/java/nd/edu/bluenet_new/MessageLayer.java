@@ -3,7 +3,6 @@ package nd.edu.bluenet_new;
 import java.util.*;
 
 public class MessageLayer implements LayerIFace {
-	public final static String BROADCAST_GROUP = "0000";
 	private final static int SMALL_MSG_MAX = 20;
 	protected Reader mReadCB;
 	protected Writer mWriteCB;

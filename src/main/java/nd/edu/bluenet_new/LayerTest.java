@@ -134,7 +134,7 @@ public class LayerTest {
 		//Example of sending a message to the broadcast group (everyone)
 
 		msg.setData("hello world!");
-		msgL.write(MessageLayer.BROADCAST_GROUP, msg);
+		msgL.write(Group.BROADCAST_GROUP, msg);
 
 		//testing out the basic query framework
 
@@ -184,7 +184,7 @@ public class LayerTest {
 		advPayload.setMsg (msg);
 		advPayload.setMsgType(AdvertisementPayload.LOCATION_UPDATE);
 		advPayload.setSrcID(a);
-		advPayload.setDestID(MessageLayer.BROADCAST_GROUP);
+		advPayload.setDestID(Group.BROADCAST_GROUP);
 		advPayload.setMsgID((byte)0b0);
 
 		System.out.println("sending a");
@@ -205,7 +205,7 @@ public class LayerTest {
 		advPayload.setMsg (msg);
 		advPayload.setMsgType(AdvertisementPayload.LOCATION_UPDATE);
 		advPayload.setSrcID(b);
-		advPayload.setDestID(MessageLayer.BROADCAST_GROUP);
+		advPayload.setDestID(Group.BROADCAST_GROUP);
 		advPayload.setMsgID((byte)0b0);
 		System.out.println("sending b");
 		dummy.write(advPayload); //send  update for 'node' b
