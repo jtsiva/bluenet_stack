@@ -43,6 +43,7 @@ public class Message {
 
     public void setData(byte[] data) {
         this.data = data;
+        this.len = (byte)data.length;
     }
 
     public void fromBytes(byte[] message){
@@ -51,7 +52,7 @@ public class Message {
         ack = (byte)((header & 0b00100000) >>> 5);
         len = (byte)(header & 0b00011111);
 
-        data = Arrays.copyOfRange(message, 1, len);
+        data = Arrays.copyOfRange(message, 1, len + 1);
     }
 
     public byte[] getBytes(){
@@ -64,13 +65,23 @@ public class Message {
 
         byte [] returnBytes = new byte[len + 1];
         returnBytes[0] = header;
-
-        for (int i = 0; i < data.length; i++)
-            returnBytes[i+1] = data[i];
+        System.arraycopy(data, 0, returnBytes, 1, data.length);
 
         return returnBytes;
     }
 
+    public char[] getPrettyBytes() {
+        final  char[] hexArray = "0123456789ABCDEF".toCharArray();
+        byte[] bytes = this.getBytes();
+        char[] hexChars = new char[bytes.length * 2];
+        for ( int j = 0; j < bytes.length; j++ ) {
+            int v = bytes[j] & 0xFF;
+            hexChars[j * 2] = hexArray[v >>> 4];
+            hexChars[j * 2 + 1] = hexArray[v & 0x0F];
+        }
+
+        return hexChars;
+    }
 
 
 

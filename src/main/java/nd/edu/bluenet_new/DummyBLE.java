@@ -21,6 +21,8 @@ public class DummyBLE implements LayerIFace{
 
 	public int read(AdvertisementPayload advPayload) {
 		System.out.println("Dummy hit");
+		System.out.println(advPayload.getPrettyBytes());
+		System.out.println(advPayload.getMsg().getPrettyBytes());
 		return mReadCB.read(advPayload);
 	}
 
@@ -44,7 +46,22 @@ public class DummyBLE implements LayerIFace{
 		 */
 
 		System.out.println("Dummy hit");
-		return read(advPayload);
+		System.out.println(advPayload.getPrettyBytes());
+		System.out.println(advPayload.getMsg().getPrettyBytes());
+
+		//get bytes and parse to test functionality
+
+		AdvertisementPayload payload = new AdvertisementPayload();
+		byte[] tmpA = advPayload.getBytes();
+		byte[] tmpB = advPayload.getMsg().getBytes();
+		byte[] all = new byte[tmpA.length + tmpB.length];
+		System.arraycopy(tmpA, 0, all, 0, tmpA.length);
+		System.arraycopy(tmpB, 0, all, tmpA.length, tmpB.length);
+		payload.fromBytes(all);
+
+		payload.setMsgType (advPayload.getMsgType());
+
+		return read(payload);
 	}
 
 	public int write(String dest, Message message) {

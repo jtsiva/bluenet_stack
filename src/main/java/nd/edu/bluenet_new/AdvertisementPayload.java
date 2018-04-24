@@ -49,12 +49,39 @@ public class AdvertisementPayload {
         return true;
     }
 
+    public void fromBytes(byte[] bytes) {
+        byte[] srcID = Arrays.copyOfRange(bytes, 0, 4);
+        byte[] destID = Arrays.copyOfRange(bytes, 4, 8);
+        byte[] msgID = Arrays.copyOfRange(bytes, 8, 9);
+
+        byte[] msg = Arrays.copyOfRange(bytes, 9, bytes.length);
+
+        this.srcID = srcID;
+        this.destID = destID;
+        this.msgID = msgID[0]; //single bytes
+        this.msg = new Message();
+        this.msg.fromBytes(msg);
+    }
+
     public byte[] getBytes(){
         byte [] bytes = new byte[9];
         System.arraycopy(srcID, 0, bytes,0,srcID.length);
         System.arraycopy(destID, 0, bytes,srcID.length,destID.length);
         bytes[8] = msgID;
         return bytes;
+    }
+
+    public char[] getPrettyBytes() {
+        final  char[] hexArray = "0123456789ABCDEF".toCharArray();
+        byte[] bytes = this.getBytes();
+        char[] hexChars = new char[bytes.length * 2];
+        for ( int j = 0; j < bytes.length; j++ ) {
+            int v = bytes[j] & 0xFF;
+            hexChars[j * 2] = hexArray[v >>> 4];
+            hexChars[j * 2 + 1] = hexArray[v & 0x0F];
+        }
+
+        return hexChars;
     }
 
     public void setSrcID(String srcID){
