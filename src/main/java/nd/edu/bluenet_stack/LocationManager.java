@@ -18,8 +18,9 @@ public class LocationManager implements LayerIFace {
 		mWriteCB = null;
 	}
 
-	// next two functions based on: https://stackoverflow.com/questions/14308746/how-to-convert-from-a-float-to-4-bytes-in-java
+	// https://stackoverflow.com/questions/14308746/how-to-convert-from-a-float-to-4-bytes-in-java
 	private void sendLocation() {
+
 		LocationEntry myLoc = mIDLocationTable.get(mID);
 		if (myLoc != null) {
 			Message msg = new Message();
@@ -40,8 +41,24 @@ public class LocationManager implements LayerIFace {
 			advPayload.setMsgType(AdvertisementPayload.LOCATION_UPDATE);
 			advPayload.setSrcID(mID);
 			advPayload.setDestID(MessageLayer.BROADCAST_GROUP); //not sure if this really matters
-			mWriteCB.write(advPayload);
+
+			if (this.shouldPass()) {
+				mWriteCB.write(advPayload);
+			}
 		}
+	}
+
+	private int updateLocation(String id, float lat, float lon) {
+
+		LocationEntry entry = new LocationEntry();
+
+		entry.mLatitude = lat;
+		entry.mLongitude = lon;
+		entry.mTimestamp = new Timestamp(System.currentTimeMillis());
+
+		mIDLocationTable.put(id, entry);
+
+		return 0;
 	}
 
 	private int updateLocation(String id, Message message) {
@@ -53,15 +70,7 @@ public class LocationManager implements LayerIFace {
 
 		System.out.println("Updating: " + id);
 
-		LocationEntry entry = new LocationEntry();
-
-		entry.mLatitude = lat;
-		entry.mLongitude = lon;
-		entry.mTimestamp = new Timestamp(System.currentTimeMillis());
-
-		mIDLocationTable.put(id, entry);
-
-		return 0;
+		return this.updateLocation(id, lat, lon);
 	}
 
 	private boolean inDirection(String srcID, String destID) {
@@ -98,12 +107,7 @@ public class LocationManager implements LayerIFace {
 			the given ID should be forwarded. We do not want a broadcast
 			storm of location updates.
 
-			Here we implement a simple policy in which the farther we are from
-			the source of the location update, the longer we will wait between
-			location updates to forward	an update. The forwarding is 
-			non-directional, but with message filtering in place, messages back
-			in the direction of the sender will be dropped because they will 
-			have already been seen.
+			See protocol proposal in OSF
 
 			The distance thresholds will likely need to be adjusted 
 
@@ -227,12 +231,9 @@ public class LocationManager implements LayerIFace {
 			// handling of locations within the stack
 			// expects:
 			// latitude longitude
-			LocationEntry loc = new LocationEntry();
-			loc.mLatitude = Float.parseFloat(parts[1]);
-			loc.mLongitude = Float.parseFloat(parts[2]);
-			loc.mTimestamp = new Timestamp(System.currentTimeMillis());
 
-			mIDLocationTable.put(mID, loc);
+			this.updateLocation(mID, Float.parseFloat(parts[1]), Float.parseFloat(parts[2]));
+			sendLocation();
 		}
 		else if (Objects.equals(parts[0], "getNeighbors")) {
 			for ( String key : mIDLocationTable.keySet() ) {
