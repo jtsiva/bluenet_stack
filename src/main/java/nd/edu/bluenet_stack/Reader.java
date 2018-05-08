@@ -1,4 +1,4 @@
-package nd.edu.bluenet_new;
+package nd.edu.bluenet_stack;
 
 public interface Reader {
 	public int read(AdvertisementPayload advPayload);
