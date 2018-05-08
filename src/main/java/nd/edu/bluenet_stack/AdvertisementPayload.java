@@ -20,7 +20,10 @@ public class AdvertisementPayload {
     private byte[] destID = null;
     private byte msgID = 0;
     private int msgType = 0;
-    private Message msg = null; //only used if msg type is small
+    private byte ttl = 0b11;
+    private byte hp = 0b0;
+    private byte len = 0b0;
+    private byte[] msg = null; //only used if msg type is small
 
     @Override
     public boolean equals(Object obj) {
@@ -54,26 +57,38 @@ public class AdvertisementPayload {
         byte[] destID = Arrays.copyOfRange(bytes, 4, 8);
         byte[] msgID = Arrays.copyOfRange(bytes, 8, 9);
 
-        byte[] msg = Arrays.copyOfRange(bytes, 9, bytes.length);
+        byte header = Arrays.copyOfRange(bytes, 9, 10)[0];
 
         this.srcID = srcID;
         this.destID = destID;
         this.msgID = msgID[0]; //single bytes
-        this.msg = new Message();
-        this.msg.fromBytes(msg);
+
+        this.ttl = (byte)((header & 0b11000000) >>> 6);
+        this.hp = (byte)((header & 0b00100000) >>> 5);
+        this.len = (byte)(header & 0b00011111);
+
+        this.msg = Arrays.copyOfRange(bytes, 10, 10+len + 1);
+
     }
 
-    public byte[] getBytes(){
-        byte [] bytes = new byte[9];
+    public byte[] getHeader(){
+        byte [] bytes = new byte[10];
         System.arraycopy(srcID, 0, bytes,0,srcID.length);
         System.arraycopy(destID, 0, bytes,srcID.length,destID.length);
         bytes[8] = msgID;
+
+        byte header = 0b0;
+        header = (byte)(header | (this.ttl << 6));
+        header = (byte)(header | (this.hp << 5));
+        header = (byte)(header | this.len);
+
+        bytes[9] = header
         return bytes;
     }
 
     public char[] getPrettyBytes() {
         final  char[] hexArray = "0123456789ABCDEF".toCharArray();
-        byte[] bytes = this.getBytes();
+        byte[] bytes = this.getHeader();
         char[] hexChars = new char[bytes.length * 2];
         for ( int j = 0; j < bytes.length; j++ ) {
             int v = bytes[j] & 0xFF;
@@ -104,14 +119,6 @@ public class AdvertisementPayload {
         return msgID;
     }
 
-    public void setMsg(Message msg) {
-        this.msg = msg;
-    }
-
-    public Message getMsg() {
-        return msg;
-    }
-
     public void setMsgType (int msgType) {
         this.msgType = msgType;
     }
@@ -119,5 +126,28 @@ public class AdvertisementPayload {
     public int getMsgType () {
         return msgType;
     }
+
+    public byte getTTL() {
+        return this.ttl;
+    }
+
+    public void decTTL () {
+        this.ttl -= 1;
+    }
+
+    public boolean isHighPriority() {
+        return (1 == this.hp);
+    }
+
+    public void setMsg(byte[] msg) {
+        this.len = msg.length;
+        this.msg = msg;
+    }
+
+    public byte[] getMsg() {
+        return msg;
+    }
+
+   
 
 }
