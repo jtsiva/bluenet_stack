@@ -2,6 +2,7 @@ package nd.edu.bluenet_stack;
 
 import java.util.*;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 
 public class LayerTest {
 
@@ -10,7 +11,6 @@ public class LayerTest {
 	public static void main(String[] args){
 
 		System.out.println("setting things up...");
-		Message msg = new Message();
 
 		MessageLayer msgL = new MessageLayer();
 		LocationManager locMgr = new LocationManager();
@@ -81,7 +81,7 @@ public class LayerTest {
 				return msgL.read(advPayload);
 			}
 
-			public int read(String src, Message message) {
+			public int read(String src, byte[] message) {
 				return -1;
 			}
 		});
@@ -92,7 +92,7 @@ public class LayerTest {
 			public int write(AdvertisementPayload advPayload) {
 				return dummy.write(advPayload);
 			}
-			public int write(String dest, Message message) {
+			public int write(String dest, byte[] message) {
 				return dummy.write(dest, message);
 			}
 		});
@@ -101,10 +101,10 @@ public class LayerTest {
 		//However, an AdvertisementPayload is passed up then it is sent to LocationManager
 		//to handle
 		msgL.setReadCB(new Reader() {
-			public int read(String src, Message message) {
+			public int read(String src, byte[] message) {
 				//From: https://stackoverflow.com/questions/9655181/how-to-convert-a-byte-array-to-a-hex-string-in-java
 				final  char[] hexArray = "0123456789ABCDEF".toCharArray();
-				byte[] bytes = message.getBytes();
+				byte[] bytes = message;
 				char[] hexChars = new char[bytes.length * 2];
 			    for ( int j = 0; j < bytes.length; j++ ) {
 			        int v = bytes[j] & 0xFF;
@@ -126,15 +126,15 @@ public class LayerTest {
 			public int write(AdvertisementPayload advPayload) {
 				return msgL.write(advPayload);
 			}
-			public int write(String dest, Message message) {
+			public int write(String dest, byte[] message) {
 				return -1;
 			}
 		});
 
 		//Example of sending a message to the broadcast group (everyone)
-
-		msg.setData("hello world!");
-		msgL.write(MessageLayer.BROADCAST_GROUP, msg);
+		String msg = new String();
+		msg = "hello world!";
+		msgL.write(MessageLayer.BROADCAST_GROUP, msg.getBytes(StandardCharsets.UTF_8));
 
 		//testing out the basic query framework
 
@@ -180,8 +180,8 @@ public class LayerTest {
 		System.arraycopy(lat, 0, allBytes,header.length,lat.length);
 		System.arraycopy(lon, 0, allBytes,header.length+lat.length,lon.length);
 
-		msg.fromBytes(allBytes);
-		advPayload.setMsg (msg);
+		//msg.fromBytes(allBytes);
+		advPayload.setMsg (allBytes);
 		advPayload.setMsgType(AdvertisementPayload.LOCATION_UPDATE);
 		advPayload.setSrcID(a);
 		advPayload.setDestID(MessageLayer.BROADCAST_GROUP);
@@ -201,8 +201,8 @@ public class LayerTest {
 		System.arraycopy(lat, 0, allBytes,header.length,lat.length);
 		System.arraycopy(lon, 0, allBytes,header.length+lat.length,lon.length);
 
-		msg.fromBytes(allBytes);
-		advPayload.setMsg (msg);
+		//msg.fromBytes(allBytes);
+		advPayload.setMsg (allBytes);
 		advPayload.setMsgType(AdvertisementPayload.LOCATION_UPDATE);
 		advPayload.setSrcID(b);
 		advPayload.setDestID(MessageLayer.BROADCAST_GROUP);
@@ -228,8 +228,9 @@ public class LayerTest {
 		//Test the protocol container
 		ProtocolContainer proto = new ProtocolContainer();
 		proto.regCallback(new Result () {
-			public int provide (String src, String data) {
-				System.out.println(src + ": " + data);
+			public int provide (String src, byte[] data) {
+				System.out.print(src + ": ");
+				System.out.println(data);
 				return 0;
 			}
 		});

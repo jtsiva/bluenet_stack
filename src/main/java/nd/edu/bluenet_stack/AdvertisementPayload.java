@@ -82,7 +82,7 @@ public class AdvertisementPayload {
         header = (byte)(header | (this.hp << 5));
         header = (byte)(header | this.len);
 
-        bytes[9] = header
+        bytes[9] = header;
         return bytes;
     }
 
@@ -139,8 +139,17 @@ public class AdvertisementPayload {
         return (1 == this.hp);
     }
 
+    public void setHighPriority(boolean priority) {
+        if (priority) {
+            this.hp = 0b1;
+        }
+        else {
+            this.hp = 0b0;
+        }
+    }
+
     public void setMsg(byte[] msg) {
-        this.len = msg.length;
+        this.len = (byte)msg.length;
         this.msg = msg;
     }
 

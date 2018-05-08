@@ -22,7 +22,7 @@ public class LocationManager implements LayerIFace {
 	private void sendLocation() {
 		LocationEntry myLoc = mIDLocationTable.get(mID);
 		if (myLoc != null) {
-			Message msg = new Message();
+			//Message msg = new Message();
 			AdvertisementPayload advPayload = new AdvertisementPayload();
 
 			byte[] lat = ByteBuffer.allocate(4).putFloat(myLoc.mLatitude).array();
@@ -35,8 +35,8 @@ public class LocationManager implements LayerIFace {
 			System.arraycopy(lat, 0, allBytes,header.length,lat.length);
 			System.arraycopy(lon, 0, allBytes,header.length+lat.length,lon.length);
 
-			msg.fromBytes(allBytes);
-			advPayload.setMsg (msg);
+			//msg.fromBytes(allBytes);
+			advPayload.setMsg (allBytes);
 			advPayload.setMsgType(AdvertisementPayload.LOCATION_UPDATE);
 			advPayload.setSrcID(mID);
 			advPayload.setDestID(MessageLayer.BROADCAST_GROUP); //not sure if this really matters
@@ -44,9 +44,9 @@ public class LocationManager implements LayerIFace {
 		}
 	}
 
-	private int updateLocation(String id, Message message) {
-		byte [] latBytes = Arrays.copyOfRange(message.getData(),0,4);
-		byte [] lonBytes = Arrays.copyOfRange(message.getData(),4,8);
+	private int updateLocation(String id, byte[] message) {
+		byte [] latBytes = Arrays.copyOfRange(message,0,4);
+		byte [] lonBytes = Arrays.copyOfRange(message,4,8);
 
 		float lat =  ByteBuffer.wrap(latBytes).getFloat();
 		float lon =  ByteBuffer.wrap(lonBytes).getFloat();
@@ -127,7 +127,7 @@ public class LocationManager implements LayerIFace {
 		return result;
 	}
 
-	public int read(String src, Message message) {
+	public int read(String src, byte[] message) {
 
 		return -1;
 	}
@@ -136,7 +136,7 @@ public class LocationManager implements LayerIFace {
 
 		return 0;
 	}
-	public int write(String dest, Message message){
+	public int write(String dest, byte[] message){
 
 		return -1;
 	}
