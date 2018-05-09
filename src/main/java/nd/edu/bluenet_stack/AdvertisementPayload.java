@@ -111,6 +111,10 @@ public class AdvertisementPayload {
         this.destID = destID.getBytes(StandardCharsets.UTF_8);
     }
 
+    public byte[] getDestID() {
+        return destID;
+    }
+
     public void setMsgID (byte msgID) {
         this.msgID = msgID;
     }

@@ -1,6 +1,6 @@
-package nd.edu.bluenet_new;
+package nd.edu.bluenet_stack;
 
-public class GeoGroup {
+public class GeoGroup extends Group{
 	private float mLatitude;
 	private float mLongitude;
 	private float mRadius;
@@ -13,7 +13,7 @@ public class GeoGroup {
 	}
 
 	public GeoGroup(String id) {
-		GeoGroup (id, 0.0f, 0.0f, 0.0f);
+		this (id, 0.0f, 0.0f, 0.0f);
 	}
 
 	public float getLatitude () {
@@ -33,10 +33,10 @@ public class GeoGroup {
 		double dist = LocationManager.distance(mLatitude, mLongitude, latitude, longitude);
 
 		if (dist < mRadius) {
-			join();
+			super.join();
 		}
 		else {
-			leave();
+			super.leave();
 		}
 	}
 }

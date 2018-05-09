@@ -1,4 +1,7 @@
-package nd.edu.bluenet_new;
+package nd.edu.bluenet_stack;
+
+
+import java.nio.charset.StandardCharsets;
 
 public class Group {
 	public final static String BROADCAST_GROUP = "0000";
@@ -11,6 +14,12 @@ public class Group {
 	private String mID;
 	private int mType;
 	private boolean mJoined;
+
+	public Group() {
+		mID = BROADCAST_GROUP;
+		mType = -1;//non-existent type
+		mJoined = false;
+	}
 
 	public Group (String id, int type) {
 		mID = id;

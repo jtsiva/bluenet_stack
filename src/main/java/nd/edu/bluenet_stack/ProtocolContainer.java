@@ -169,7 +169,20 @@ public class ProtocolContainer implements BlueNetIFace {
 	}
 
 	public Group [] getGroups()	{
-		return new Group()[1];
+
+		String res = mQuery.ask("GrpMgr.getGroups");
+		String[] groupInfo = res.split(",");
+		Group[] groups = new Group[groupInfo.length];
+		int index = 0;
+
+		for (String group: groupInfo) {
+			String[] parts = group.split("\\s+");
+			groups[index] = new NamedGroup(parts[0],parts[1]);
+			index++;
+		}
+		
+
+		return groups;
 	}
 
 	public void addGroup(String name) {

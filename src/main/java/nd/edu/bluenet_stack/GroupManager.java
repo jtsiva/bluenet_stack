@@ -1,4 +1,4 @@
-package nd.edu.bluenet_new;
+package nd.edu.bluenet_stack;
 
 import java.util.*;
 
@@ -55,15 +55,17 @@ public class GroupManager implements LayerIFace{
 			mReadCB.read(advPayload);
 		}
 
+		return 0;
+
 	}
-	public int read(String src, Message message) {
+	public int read(String src, byte[] message) {
 		throw new java.lang.UnsupportedOperationException("Not supported.");
 	}
 	public int write(AdvertisementPayload advPayload) {
 		//Used for group creation?
 		throw new java.lang.UnsupportedOperationException("Not supported.");
 	}
-	public int write(String dest, Message message) {
+	public int write(String dest, byte[] message) {
 		//Used for group creation?
 		throw new java.lang.UnsupportedOperationException("Not supported.");
 	}
@@ -84,7 +86,23 @@ public class GroupManager implements LayerIFace{
 			
 			for (Group group: mGroups) {
 				if (Group.GEO_GROUP == group.getType()) {
-					group.join(latitude, longitude);
+					GeoGroup tmpGrp = (GeoGroup)group;
+					tmpGrp.join(latitude, longitude);
+				}
+			}
+		}
+		else if (Objects.equals(parts[0], "getGroups")) {
+			for (Group group: mGroups) {
+				if (Group.NAMED_GROUP == group.getType()) {
+					NamedGroup tmpGrp = (NamedGroup)group;
+					resultString += new String(tmpGrp.getID()) + " " + tmpGrp.getName() + ",";
+				}
+			}
+		}
+		else if (Objects.equals(parts[0], "joinGroups")) {
+			for (Group group: mGroups) {
+				if (Objects.equals(parts[1], group.getID())) {
+					group.join();
 				}
 			}
 		}
@@ -92,7 +110,7 @@ public class GroupManager implements LayerIFace{
 			//remove group if we haven't used it in a while
 		}
 		else if (Objects.equals(parts[0], "getCheckSum")) {
-			resultString = String(getChkSum());
+			resultString = new String(getChkSum());
 		}
 
 		return resultString;

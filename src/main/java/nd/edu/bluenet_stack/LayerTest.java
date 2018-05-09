@@ -134,7 +134,7 @@ public class LayerTest {
 		//Example of sending a message to the broadcast group (everyone)
 		String msg = new String();
 		msg = "hello world!";
-		msgL.write(Group.BROADCAST_GROUP, msg);
+		msgL.write(Group.BROADCAST_GROUP, msg.getBytes(StandardCharsets.UTF_8));
 
 		//testing out the basic query framework
 
@@ -174,11 +174,9 @@ public class LayerTest {
 		byte[] lat = ByteBuffer.allocate(4).putFloat(latitude).array();
 		byte[] lon = ByteBuffer.allocate(4).putFloat(longitude).array();
 
-		byte[] header = {(byte)0b11001000};
-		byte[] allBytes = new byte[header.length + lat.length + lon.length];
-		System.arraycopy(header, 0, allBytes,0,header.length);
-		System.arraycopy(lat, 0, allBytes,header.length,lat.length);
-		System.arraycopy(lon, 0, allBytes,header.length+lat.length,lon.length);
+		byte[] allBytes = new byte[lat.length + lon.length+2];
+		System.arraycopy(lat, 0, allBytes,0,lat.length);
+		System.arraycopy(lon, 0, allBytes,lat.length,lon.length);
 
 		//msg.fromBytes(allBytes);
 		advPayload.setMsg (allBytes);
@@ -197,9 +195,9 @@ public class LayerTest {
 		lat = ByteBuffer.allocate(4).putFloat(latitude).array();
 		lon = ByteBuffer.allocate(4).putFloat(longitude).array();
 
-		System.arraycopy(header, 0, allBytes,0,header.length);
-		System.arraycopy(lat, 0, allBytes,header.length,lat.length);
-		System.arraycopy(lon, 0, allBytes,header.length+lat.length,lon.length);
+		
+		System.arraycopy(lat, 0, allBytes,0,lat.length);
+		System.arraycopy(lon, 0, allBytes,lat.length,lon.length);
 
 		//msg.fromBytes(allBytes);
 		advPayload.setMsg (allBytes);
@@ -235,7 +233,7 @@ public class LayerTest {
 			}
 		});
 
-		proto.write(MessageLayer.BROADCAST_GROUP, "proto test: hello world!");
+		proto.write(Group.BROADCAST_GROUP, "proto test: hello world!");
 
 
 	}

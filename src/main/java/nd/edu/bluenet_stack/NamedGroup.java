@@ -1,4 +1,4 @@
-package nd.edu.bluenet_new;
+package nd.edu.bluenet_stack;
 
 public class NamedGroup extends Group {
 	private String mName;
@@ -9,10 +9,10 @@ public class NamedGroup extends Group {
 	}
 
 	public NamedGroup(String id) {
-		NamedGroup (id, "");
+		this (id, "");
 	}
 
-	public getName() {
+	public String getName() {
 		return mName;
 	}
 
