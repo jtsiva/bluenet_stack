@@ -12,7 +12,7 @@ public class AdvertisementPayload {
     public final static int SMALL_MESSAGE = 0x186A;
     public final static int REGULAR_MESSAGE = 0x1869;
     public final static int LOCATION_UPDATE = 0x1868;
-    //public final static byte GROUP_ADVERTISE = 0x186B;
+    public final static int GROUP_ADVERTISE = 0x186B;
     //public final static byte GROUP_QUERY = 0x186C;
     //public final static byte GROUP_REGISTER = 0x186D;
 

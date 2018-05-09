@@ -54,6 +54,11 @@ public class ProtocolContainer implements BlueNetIFace {
 					else if (Objects.equals("reset id", parts[QUERY])) { //id collision detected so regen
 						mID = mRandString.nextString();
 					}
+					else if (parts[QUERY].contains("setLocation")) { //maybe all other global queries are passed to everyone?
+						for (LayerIFace layer: mLayers) {
+							resultString = layer.query(parts[QUERY]);
+						}
+					}
 				}
 				else {
 
@@ -161,6 +166,25 @@ public class ProtocolContainer implements BlueNetIFace {
 	}
 	public String getLocation(String id) {
 		return mQuery.ask("LocMgr.getLocation " + id);
+	}
+
+	public Group [] getGroups()	{
+		return new Group()[1];
+	}
+
+	public void addGroup(String name) {
+
+	}
+
+	public void addGroup(float lat, float lon, float rad) {
+
+	}
+	public boolean joinGroup(String id) {
+		return false;
+	}
+
+	public boolean leaveGroup(String id) {
+		return false;
 	}
 
 	//************************************************

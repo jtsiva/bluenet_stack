@@ -29,17 +29,25 @@ public class LocationManager implements LayerIFace {
 			byte[] lon = ByteBuffer.allocate(4).putFloat(myLoc.mLongitude).array();
 
 			//Query for standard header? final in relevant class?
-			byte[] header = {(byte)0b11001000};
-			byte[] allBytes = new byte[header.length + lat.length + lon.length];
+			byte[] header = {(byte)0b11001010};
+			byte[] allBytes = new byte[header.length + lat.length + lon.length + 2];
 			System.arraycopy(header, 0, allBytes,0,header.length);
 			System.arraycopy(lat, 0, allBytes,header.length,lat.length);
 			System.arraycopy(lon, 0, allBytes,header.length+lat.length,lon.length);
 
+
 			//msg.fromBytes(allBytes);
 			advPayload.setMsg (allBytes);
+
+			String result = mQueryCB.ask("GrpMgr", "getCheckSum");
+			byte [] chksum = result.getBytes();
+
+			System.arraycopy(chksum, 0, allBytes, header.length+lat.length+lon.length, chksum.length);
+
 			advPayload.setMsgType(AdvertisementPayload.LOCATION_UPDATE);
 			advPayload.setSrcID(mID);
-			advPayload.setDestID(MessageLayer.BROADCAST_GROUP); //not sure if this really matters
+			advPayload.setDestID(Group.BROADCAST_GROUP); //not sure if this really matters
+
 			mWriteCB.write(advPayload);
 		}
 	}
@@ -76,8 +84,8 @@ public class LocationManager implements LayerIFace {
 			result = true; //we don't know otherwise
 		}
 		else {
-			double srcToDestDist = distance(srcLoc.mLatitude, srcLoc.mLongitude, destLoc.mLatitude, destLoc.mLongitude);
-			double meToDestDist = distance(myLoc.mLatitude, myLoc.mLongitude, destLoc.mLatitude, destLoc.mLongitude);
+			double srcToDestDist = LocationManager.distance(srcLoc.mLatitude, srcLoc.mLongitude, destLoc.mLatitude, destLoc.mLongitude);
+			double meToDestDist = LocationManager.distance(myLoc.mLatitude, myLoc.mLongitude, destLoc.mLatitude, destLoc.mLongitude);
 			
 			// System.out.println(srcToDestDist);
 			// System.out.println(meToDestDist);
@@ -196,7 +204,7 @@ public class LocationManager implements LayerIFace {
 
 	//From: https://stackoverflow.com/questions/3694380/calculating-distance-between-two-points-using-latitude-longitude-what-am-i-doi
 
-	private double distance(double lat1, double lon1, double lat2, double lon2) {
+	public static double distance(double lat1, double lon1, double lat2, double lon2) {
 		final int R = 6371; // Radius of the earth
 
 		double latDistance = Math.toRadians(lat2 - lat1);
