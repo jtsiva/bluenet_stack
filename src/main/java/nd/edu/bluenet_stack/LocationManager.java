@@ -3,6 +3,7 @@ package nd.edu.bluenet_stack;
 import java.util.*;
 import java.nio.ByteBuffer;
 import java.sql.Timestamp;
+import static java.lang.Math.sqrt;
 
 public class LocationManager implements LayerIFace {
 	protected HashMap<String, LocationEntry> mIDLocationTable = null;
@@ -20,50 +21,48 @@ public class LocationManager implements LayerIFace {
 
 	// https://stackoverflow.com/questions/14308746/how-to-convert-from-a-float-to-4-bytes-in-java
 	private void sendLocation() {
-
 		LocationEntry myLoc = mIDLocationTable.get(mID);
 		if (myLoc != null) {
-			Message msg = new Message();
 			AdvertisementPayload advPayload = new AdvertisementPayload();
 
-			byte[] lat = ByteBuffer.allocate(4).putFloat(myLoc.mLatitude).array();
-			byte[] lon = ByteBuffer.allocate(4).putFloat(myLoc.mLongitude).array();
+			byte[] lat = ByteBuffer.allocate(4).putFloat(getLocation(mID).mLatitude).array();
+			byte[] lon = ByteBuffer.allocate(4).putFloat(getLocation(mID).mLongitude).array();
+			//group checksum
 
 			//Query for standard header? final in relevant class?
-			byte[] header = {(byte)0b11001000};
-			byte[] allBytes = new byte[header.length + lat.length + lon.length];
-			System.arraycopy(header, 0, allBytes,0,header.length);
-			System.arraycopy(lat, 0, allBytes,header.length,lat.length);
-			System.arraycopy(lon, 0, allBytes,header.length+lat.length,lon.length);
+			byte[] allBytes = new byte[lat.length + lon.length + 2];
+			System.arraycopy(lat, 0, allBytes,0,lat.length);
+			System.arraycopy(lon, 0, allBytes,lat.length,lon.length);
 
-			msg.fromBytes(allBytes);
-			advPayload.setMsg (msg);
+			//msg.fromBytes(allBytes);
+			advPayload.setMsg (allBytes);
 			advPayload.setMsgType(AdvertisementPayload.LOCATION_UPDATE);
 			advPayload.setSrcID(mID);
 			advPayload.setDestID(MessageLayer.BROADCAST_GROUP); //not sure if this really matters
 
-			if (this.shouldPass()) {
+			if (this.shouldPass(advPayload)) {
 				mWriteCB.write(advPayload);
 			}
 		}
 	}
 
 	private int updateLocation(String id, float lat, float lon) {
+		LocationEntry loc = mIDLocationTable.get(id);
 
-		LocationEntry entry = new LocationEntry();
+		if (loc == null) {
+			loc = new LocationEntry();
+		}
+		
+		loc.update(lat, lon);
 
-		entry.mLatitude = lat;
-		entry.mLongitude = lon;
-		entry.mTimestamp = new Timestamp(System.currentTimeMillis());
-
-		mIDLocationTable.put(id, entry);
+		mIDLocationTable.put(id, loc);
 
 		return 0;
 	}
 
-	private int updateLocation(String id, Message message) {
-		byte [] latBytes = Arrays.copyOfRange(message.getData(),0,4);
-		byte [] lonBytes = Arrays.copyOfRange(message.getData(),4,8);
+	private int updateLocation(String id, byte[] message) {
+		byte [] latBytes = Arrays.copyOfRange(message,0,4);
+		byte [] lonBytes = Arrays.copyOfRange(message,4,8);
 
 		float lat =  ByteBuffer.wrap(latBytes).getFloat();
 		float lon =  ByteBuffer.wrap(lonBytes).getFloat();
@@ -73,12 +72,34 @@ public class LocationManager implements LayerIFace {
 		return this.updateLocation(id, lat, lon);
 	}
 
+
+	private Coordinate getLocation(String id) {
+		// provide location centroid of given node id
+		LocationEntry entry = mIDLocationTable.get(id);
+		Coordinate coordAvg = new Coordinate();
+
+		for (Coordinate coord : entry.mCoordinates) {
+			coordAvg.mLatitude += coord.mLatitude;
+			coordAvg.mLongitude += coord.mLongitude;
+		}
+
+		if (entry.mCoordinates.size() > 0) {
+			coordAvg.mLatitude /= entry.mCoordinates.size();
+			coordAvg.mLongitude /= entry.mCoordinates.size();
+		}
+
+
+		return coordAvg;
+	}
+
+	//TODO: move the two routing related things below to Routing Layer
+
 	private boolean inDirection(String srcID, String destID) {
 		//used to answer query about whether this node is in the 
 		//correct direction
-		LocationEntry srcLoc = mIDLocationTable.get(srcID);
-		LocationEntry destLoc = mIDLocationTable.get(destID);
-		LocationEntry myLoc = mIDLocationTable.get(mID);
+		Coordinate srcLoc = getLocation(srcID);
+		Coordinate destLoc = getLocation(destID);
+		Coordinate myLoc = getLocation(mID);
 
 		boolean result;
 		if (srcLoc == null || destLoc == null || myLoc == null) {
@@ -96,12 +117,7 @@ public class LocationManager implements LayerIFace {
 		return result;
 	}
 
-	private LocationEntry getLocation(String id) {
-		// provide location of given node id
-		return mIDLocationTable.get(id);
-	}
-
-	private boolean shouldPass(String id) {
+	private boolean shouldPass(AdvertisementPayload advPayload) {
 		/*
 			Implement policy to determine whether the location update from
 			the given ID should be forwarded. We do not want a broadcast
@@ -113,36 +129,103 @@ public class LocationManager implements LayerIFace {
 
 		*/
 
+		final byte ME = 4; //hops
+		final float ME_D_THRESHOLD = 1.0f; //meters
+		final byte NEAR = 3;
+		final float NEAR_D_THRESHOLD = 3.0f;
+		final byte MEDIUM = 2;
+		final float MEDIUM_D_THRESHOLD = 7.0f;
+		final byte FAR = 1;
+		final float FAR_D_THRESHOLD = 13.0f;
 
-		final long CLOSE_T_THRESHOLD = 2000; //millis
-		final float CLOSE_D_THRESHOLD = 5.0f; //meters
-		final long INTERMEDIATE_T_THRESHOLD = 5000;
-		final float INTERMEDIATE_D_THRESHOLD = 15.0f;
-		final long FAR_T_THRESHOLD = 7000;
-		final float FAR_D_THRESHOLD = 50.0f;
-		final long VERY_FAR_T_THRESHOLD = 11000;
+		String id = new String(advPayload.getSrcID());
+		byte ttl = advPayload.getTTL();
+		LocationEntry entry = mIDLocationTable.get(id);
+		float d = applyError(positionSpread(id), entry.mLastForward);
+		boolean result = false;
 
-		LocationEntry otherLoc = mIDLocationTable.get(id);
-		LocationEntry myLoc = mIDLocationTable.get(mID);
-
-		if (null == otherLoc.mLastForward) {
-			otherLoc.mLastForward = new Timestamp(System.currentTimeMillis());
+		if (ME == ttl) {
+			result = d > ME_D_THRESHOLD;
 		}
-
-		double dist = distance(myLoc.mLatitude, myLoc.mLongitude, otherLoc.mLatitude, otherLoc.mLongitude);
+		else if (NEAR == ttl) {
+			result = d > NEAR_D_THRESHOLD;
+		}
+		else if (MEDIUM == ttl) {
+			result = d > MEDIUM_D_THRESHOLD;
+		}
+		else if (FAR == ttl) {
+			result = d > FAR_D_THRESHOLD;
+		}
 	
-		long now = System.currentTimeMillis();
-		boolean result = (distance < CLOSE_D_THRESHOLD && (now - otherLoc.mTimestamp.getTime()) > CLOSE_T_THRESHOLD) ||
-						(distance > CLOSE_D_THRESHOLD && distance < INTERMEDIATE_D_THRESHOLD && ((now - otherLoc.mTimestamp.getTime()) > INTERMEDIATE_T_THRESHOLD)) ||
-						(distance > INTERMEDIATE_D_THRESHOLD && distance < FAR_D_THRESHOLD && ((now - otherLoc.mTimestamp.getTime()) > FAR_T_THRESHOLD)) ||
-						(distance > FAR_D_THRESHOLD && (now - otherLoc.mTimestamp.getTime()) > VERY_FAR_T_THRESHOLD);
-	
-		if (result) {
-			otherLoc.mLastForward = new Timestamp(now);
-			mIDLocationTable.put(id, otherLoc);
+		if (result || null == entry.mLastForward) {
+			entry.mLastForward = new Timestamp(System.currentTimeMillis());
+			mIDLocationTable.put(id, entry);
 		}
 
 		return result;
+	}
+
+	private boolean sufficientData(String id) {
+		LocationEntry entry = mIDLocationTable.get(id);
+		return entry.mCoordinates.size() >= 2;
+	}
+
+	private float positionSpread(String id) {
+		float d = 0.0f;
+		if (sufficientData(id)) {
+			d = meanSquaredDisplacement(id);
+		}
+
+		return d;
+	}
+
+	private float meanSquaredDisplacement(String id) {
+		//https://en.wikipedia.org/wiki/Mean_squared_displacement
+		LocationEntry entry = mIDLocationTable.get(id);
+		Coordinate c_0 = entry.mCoordinates.get(0);
+		float distanceSum = 0.0f;
+		int numMeasurements = entry.mCoordinates.size();
+
+		for (Coordinate coord : entry.mCoordinates) {
+			float dist = (float)distance(c_0.mLatitude, c_0.mLongitude, coord.mLatitude, coord.mLongitude);
+			distanceSum += (dist * dist);
+		}
+
+		return distanceSum / entry.mCoordinates.size();
+	}
+
+	private float rootMeanSquareDeviationAtomicPositions(String id) {
+		//https://en.wikipedia.org/wiki/Root-mean-square_deviation_of_atomic_positions
+		LocationEntry entry = mIDLocationTable.get(id);
+
+		Coordinate coordAvg = new Coordinate();
+		float distanceSum = 0.0f;
+
+		for (Coordinate coord : entry.mCoordinates) {
+			coordAvg.mLatitude += coord.mLatitude;
+			coordAvg.mLongitude += coord.mLongitude;
+		}
+
+		coordAvg.mLatitude /= entry.mCoordinates.size();
+		coordAvg.mLongitude /= entry.mCoordinates.size();
+
+
+		for (Coordinate coord : entry.mCoordinates) {
+			float dist = (float)distance(coordAvg.mLatitude, coordAvg.mLongitude, coord.mLatitude, coord.mLongitude);
+			distanceSum += (dist * dist);
+		}
+
+		return (float)sqrt(distanceSum / entry.mCoordinates.size());
+	}
+
+	private float rootMeanSquareDeviation(String id) {
+		//https://en.wikipedia.org/wiki/Root-mean-square_deviation
+
+		return 0.0f;
+	}
+
+	private float applyError(float d, Timestamp lastForward) {
+		return d; //no time-derived error applied
 	}
 
 
@@ -173,7 +256,7 @@ public class LocationManager implements LayerIFace {
 
 		//check to see if this location is eligible for forwarding
 		//in other words, should we pass this on to the routing layer
-		if (shouldPass(advPayload.getSrcID())) {
+		if (shouldPass(advPayload)) {
 			//someone else might need this, so pass it on
 			result = mReadCB.read(advPayload);
 		}
@@ -181,7 +264,7 @@ public class LocationManager implements LayerIFace {
 		return result;
 	}
 
-	public int read(String src, Message message) {
+	public int read(String src, byte[] message) {
 
 		return -1;
 	}
@@ -190,7 +273,7 @@ public class LocationManager implements LayerIFace {
 
 		return 0;
 	}
-	public int write(String dest, Message message){
+	public int write(String dest, byte[] message){
 
 		return -1;
 	}
@@ -218,13 +301,12 @@ public class LocationManager implements LayerIFace {
 			//return a string that is:
 			//latitude longitude
 
-			LocationEntry loc = getLocation(parts[1]);
-			if (loc == null) {
-				resultString = "0.0 0.0";
-			}
-			else {
-				resultString = String.valueOf(loc.mLatitude) + " " + String.valueOf(loc.mLongitude);
-			}
+			resultString = String.valueOf(getLocation(parts[1]).mLatitude) + " " + String.valueOf(getLocation(parts[1]).mLongitude);
+		}
+		else if (Objects.equals(parts[0], "getPositionSpread")) {
+			//return a string that is:
+			//position spread
+			resultString = String.valueOf(positionSpread(parts[1]));
 		}
 		else if (Objects.equals(parts[0], "setLocation")) {
 			// allow setLocation? Bad from a security standpoint, but simplifies

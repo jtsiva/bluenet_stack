@@ -68,7 +68,7 @@ public class MessageLayer implements LayerIFace {
 		return 0;
 	}
 
-	public int write(String dest, Message message) {
+	public int write(String dest, byte[] message) {
 		/*
 			Set up the fields for the advertisement:
 				set message type
@@ -81,7 +81,7 @@ public class MessageLayer implements LayerIFace {
 
 		AdvertisementPayload advPayload = new AdvertisementPayload();
 
-		if (message.getBytes().length > SMALL_MSG_MAX) {
+		if (message.length > SMALL_MSG_MAX) {
 			advPayload.setMsgType(AdvertisementPayload.REGULAR_MESSAGE);
 		}
 		else {
@@ -99,7 +99,7 @@ public class MessageLayer implements LayerIFace {
 		return mWriteCB.write(advPayload);
 	}
 
-	public int read(String src, Message message) {
+	public int read(String src, byte[] message) {
 		throw new java.lang.UnsupportedOperationException("Not supported.");
 	}
 	public int write(AdvertisementPayload advPayload) {

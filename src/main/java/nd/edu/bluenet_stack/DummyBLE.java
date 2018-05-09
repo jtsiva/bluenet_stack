@@ -21,12 +21,10 @@ public class DummyBLE implements LayerIFace{
 
 	public int read(AdvertisementPayload advPayload) {
 		System.out.println("Dummy hit");
-		System.out.println(advPayload.getPrettyBytes());
-		System.out.println(advPayload.getMsg().getPrettyBytes());
 		return mReadCB.read(advPayload);
 	}
 
-	public int read(String src, Message message) {
+	public int read(String src, byte[] message) {
 		throw new java.lang.UnsupportedOperationException("Not supported.");
 	}
 
@@ -47,13 +45,13 @@ public class DummyBLE implements LayerIFace{
 
 		System.out.println("Dummy hit");
 		System.out.println(advPayload.getPrettyBytes());
-		System.out.println(advPayload.getMsg().getPrettyBytes());
+		//System.out.println(advPayload.getMsg().getPrettyBytes());
 
 		//get bytes and parse to test functionality
 
 		AdvertisementPayload payload = new AdvertisementPayload();
-		byte[] tmpA = advPayload.getBytes();
-		byte[] tmpB = advPayload.getMsg().getBytes();
+		byte[] tmpA = advPayload.getHeader();
+		byte[] tmpB = advPayload.getMsg();
 		byte[] all = new byte[tmpA.length + tmpB.length];
 		System.arraycopy(tmpA, 0, all, 0, tmpA.length);
 		System.arraycopy(tmpB, 0, all, tmpA.length, tmpB.length);
@@ -64,7 +62,7 @@ public class DummyBLE implements LayerIFace{
 		return read(payload);
 	}
 
-	public int write(String dest, Message message) {
+	public int write(String dest, byte[] message) {
 		throw new java.lang.UnsupportedOperationException("Not supported.");
 	}
 

@@ -85,7 +85,7 @@ public class ProtocolContainer implements BlueNetIFace {
 				return mMsg.read(advPayload);
 			}
 
-			public int read(String src, Message message) {
+			public int read(String src, byte[] message) {
 				return -1;
 			}
 		});
@@ -96,7 +96,7 @@ public class ProtocolContainer implements BlueNetIFace {
 			public int write(AdvertisementPayload advPayload) {
 				return mBLE.write(advPayload);
 			}
-			public int write(String dest, Message message) {
+			public int write(String dest, byte[] message) {
 				return mBLE.write(dest, message);
 			}
 		});
@@ -105,10 +105,10 @@ public class ProtocolContainer implements BlueNetIFace {
 		//However, an AdvertisementPayload is passed up then it is sent to LocationManager
 		//to handle
 		mMsg.setReadCB(new Reader() {
-			public int read(String src, Message message) {
+			public int read(String src, byte[] message) {
 				
 			    if (mResultHandler != null) {
-			    	mResultHandler.provide(src, new String(message.getData()));
+			    	mResultHandler.provide(src, message);
 			    }
 
 				return 0;
@@ -125,7 +125,7 @@ public class ProtocolContainer implements BlueNetIFace {
 			public int write(AdvertisementPayload advPayload) {
 				return mMsg.write(advPayload);
 			}
-			public int write(String dest, Message message) {
+			public int write(String dest, byte[] message) {
 				return -1;
 			}
 		});
@@ -139,11 +139,8 @@ public class ProtocolContainer implements BlueNetIFace {
 		return mID;
 	}
 	public int write(String destID, String input) {
-		Message message = new Message();
-		message.setData(input.getBytes());
 
-
-		int result = mLayers.get(0).write(destID, message);
+		int result = mLayers.get(0).write(destID, input.getBytes());
 
 		if (0 == result) {
 			result = input.length();
