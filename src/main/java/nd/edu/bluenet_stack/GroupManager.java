@@ -117,8 +117,47 @@ public class GroupManager implements LayerIFace{
 	}
 
 	private byte[] getChkSum () {
+		byte[] buf = new byte[mGroups.size() * 4];
 		byte[] chksum = {0b0, 0b0};
 		//make one byte array of all IDs and compute
+
+		//set up the buffer as an array of group ids
+		int index = 0;
+		for (Group group: mGroups) {
+			byte[] id = group.getID();
+			System.arraycopy(id, 0, buf,index,id.length);
+			index += id.length;
+		}
+
+		//from: https://stackoverflow.com/questions/4113890/how-to-calculate-the-internet-checksum-from-a-byte-in-java
+
+		int length = buf.length;
+	    int i = 0;
+
+	    long sum = 0;
+	    long data;
+
+	    // Handle all pairs
+	    while (length > 1) {
+	      // Corrected to include @Andy's edits and various comments on Stack Overflow
+	      data = (((buf[i] << 8) & 0xFF00) | ((buf[i + 1]) & 0xFF));
+	      sum += data;
+	      // 1's complement carry bit correction in 16-bits (detecting sign extension)
+	      if ((sum & 0xFFFF0000) > 0) {
+	        sum = sum & 0xFFFF;
+	        sum += 1;
+	      }
+
+	      i += 2;
+	      length -= 2;
+	    }
+
+	    // Final 1's complement value correction to 16-bits
+	    sum = ~sum;
+	    sum = sum & 0xFFFF;
+
+	    chksum[0] = (byte)((sum & 0xFF00) >>> 8);
+	    chksum[1] = (byte)(sum & 0x00FF);
 
 		return chksum;
 	}
