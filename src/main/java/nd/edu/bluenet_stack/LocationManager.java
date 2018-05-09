@@ -42,7 +42,7 @@ public class LocationManager implements LayerIFace {
 			String result = mQueryCB.ask("GrpMgr", "getCheckSum");
 			byte [] chksum = result.getBytes();
 
-			System.arraycopy(chksum, 0, allBytes, header.length+lat.length+lon.length, chksum.length);
+			System.arraycopy(chksum, 0, allBytes, lat.length+lon.length, chksum.length);
 
 			advPayload.setMsgType(AdvertisementPayload.LOCATION_UPDATE);
 			advPayload.setSrcID(mID);
