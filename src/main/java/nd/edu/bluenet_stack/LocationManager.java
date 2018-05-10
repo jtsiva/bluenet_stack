@@ -49,10 +49,7 @@ public class LocationManager implements LayerIFace {
 
 			advPayload.setDestID(Group.BROADCAST_GROUP); //not sure if this really matters
 
-			if (this.shouldPass(advPayload)) {
-				mWriteCB.write(advPayload);
-			}
-
+			mReadCB.read(advPayload);
 		}
 	}
 
@@ -102,8 +99,7 @@ public class LocationManager implements LayerIFace {
 		return coordAvg;
 	}
 
-	//TODO: move the two routing related things below to Routing Layer
-
+	
 	private boolean inDirection(String srcID, String destID) {
 		//used to answer query about whether this node is in the 
 		//correct direction
@@ -122,54 +118,6 @@ public class LocationManager implements LayerIFace {
 			// System.out.println(srcToDestDist);
 			// System.out.println(meToDestDist);
 			result = meToDestDist < srcToDestDist;
-		}
-
-		return result;
-	}
-
-	private boolean shouldPass(AdvertisementPayload advPayload) {
-		/*
-			Implement policy to determine whether the location update from
-			the given ID should be forwarded. We do not want a broadcast
-			storm of location updates.
-
-			See protocol proposal in OSF
-
-			The distance thresholds will likely need to be adjusted 
-
-		*/
-
-		final byte ME = 4; //hops
-		final float ME_D_THRESHOLD = 1.0f; //meters
-		final byte NEAR = 3;
-		final float NEAR_D_THRESHOLD = 3.0f;
-		final byte MEDIUM = 2;
-		final float MEDIUM_D_THRESHOLD = 7.0f;
-		final byte FAR = 1;
-		final float FAR_D_THRESHOLD = 13.0f;
-
-		String id = new String(advPayload.getSrcID());
-		byte ttl = advPayload.getTTL();
-		LocationEntry entry = mIDLocationTable.get(id);
-		float d = applyError(positionSpread(id), entry.mLastForward);
-		boolean result = false;
-
-		if (ME == ttl) {
-			result = d > ME_D_THRESHOLD;
-		}
-		else if (NEAR == ttl) {
-			result = d > NEAR_D_THRESHOLD;
-		}
-		else if (MEDIUM == ttl) {
-			result = d > MEDIUM_D_THRESHOLD;
-		}
-		else if (FAR == ttl) {
-			result = d > FAR_D_THRESHOLD;
-		}
-	
-		if (result || null == entry.mLastForward) {
-			entry.mLastForward = new Timestamp(System.currentTimeMillis());
-			mIDLocationTable.put(id, entry);
 		}
 
 		return result;
@@ -234,11 +182,6 @@ public class LocationManager implements LayerIFace {
 		return 0.0f;
 	}
 
-	private float applyError(float d, Timestamp lastForward) {
-		return d; //no time-derived error applied
-	}
-
-
 	public void setReadCB (Reader reader) {
 		mReadCB = reader;
 	}
@@ -264,12 +207,9 @@ public class LocationManager implements LayerIFace {
 			}
 		}
 
-		//check to see if this location is eligible for forwarding
-		//in other words, should we pass this on to the routing layer
-		if (shouldPass(advPayload)) {
-			//someone else might need this, so pass it on
-			result = mReadCB.read(advPayload);
-		}
+		// pass this on to the routing layer
+
+		result = mReadCB.read(advPayload);
 		
 		return result;
 	}

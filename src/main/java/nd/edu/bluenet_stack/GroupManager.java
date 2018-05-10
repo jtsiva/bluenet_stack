@@ -31,29 +31,22 @@ public class GroupManager implements LayerIFace{
 		//	- pass message relevant to this device as srcID and String-----------------Not mutually exclusive
 
 
+		boolean found = false;
 
-		if (Objects.equals(mID, new String(advPayload.getDestID()))) {
-			// message is for us so we pass up and don't worry about sending data along for further handling
+		for (Group group: mGroups) {
+			if (Arrays.equals(group.getID(), advPayload.getDestID()) && group.getStatus()) {
+				found = true;
+			}
+		}
+
+		// we belong to the group to which the message was addressed!
+		if (found) {
 			mReadCB.read(new String(advPayload.getSrcID()), advPayload.getMsg());
 		}
-		else
-		{
-			boolean found = false;
 
-			for (Group group: mGroups) {
-				if (Arrays.equals(group.getID(), advPayload.getDestID()) && group.getStatus()) {
-					found = true;
-				}
-			}
-
-			// we belong to the group to which the message was addressed!
-			if (found) {
-				mReadCB.read(new String(advPayload.getSrcID()), advPayload.getMsg());
-			}
-
-			// but more handling may still be required (such as forwarding)
-			mReadCB.read(advPayload);
-		}
+		// but more handling may still be required (such as forwarding)
+		mReadCB.read(advPayload);
+		
 
 		return 0;
 

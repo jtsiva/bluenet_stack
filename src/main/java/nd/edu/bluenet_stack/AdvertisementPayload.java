@@ -9,21 +9,28 @@ import java.nio.charset.StandardCharsets;
  */
 
 public class AdvertisementPayload {
-    public final static int SMALL_MESSAGE = 0x186A;
-    public final static int REGULAR_MESSAGE = 0x1869;
-    public final static int LOCATION_UPDATE = 0x1868;
+    public final static int SMALL_MESSAGE = 0x186A; //always a push
+    public final static int REGULAR_MESSAGE = 0x1869; //push or pull based on size of advertisement
+    //public final static int REGULAR_PULL_MESSAGE = 0x186E;// pull option
+    public final static int LOCATION_UPDATE = 0x1868; //always a push
     public final static int GROUP_ADVERTISE = 0x186B;
     //public final static byte GROUP_QUERY = 0x186C;
     //public final static byte GROUP_REGISTER = 0x186D;
+
+    public final static byte MAX_TTL = 0b11;
 
     private byte[] srcID = null;
     private byte[] destID = null;
     private byte msgID = 0;
     private int msgType = 0;
-    private byte ttl = 0b11;
+    private byte ttl = MAX_TTL;
     private byte hp = 0b0;
     private byte len = 0b0;
     private byte[] msg = null; //only used if msg type is small
+    private byte[] oneHopNeighbor = null;
+
+    private MessageRetriever msgRetriever = null;
+    private boolean needRetriever = false;
 
     @Override
     public boolean equals(Object obj) {
@@ -67,8 +74,17 @@ public class AdvertisementPayload {
         this.hp = (byte)((header & 0b00100000) >>> 5);
         this.len = (byte)(header & 0b00011111);
 
-        this.msg = Arrays.copyOfRange(bytes, 10, 10+len + 1);
+        if (10 < bytes.length) { //message was pushed
+            this.msg = Arrays.copyOfRange(bytes, 10, 10+len);
+        }
+        else {
+            needRetriever = true; //we're going to pull the data when we need it
+        }
 
+    }
+
+    public void setRetriever(MessageRetriever retriever) {
+        msgRetriever = retriever;
     }
 
     public byte[] getHeader(){
@@ -115,6 +131,14 @@ public class AdvertisementPayload {
         return destID;
     }
 
+    public void setOneHopNeighbor(String neighborID) {
+        this.oneHopNeighbor = neighborID.getBytes(StandardCharsets.UTF_8);
+    }
+
+    public byte[] getOneHopNeighbor () {
+        return oneHopNeighbor;
+    }
+
     public void setMsgID (byte msgID) {
         this.msgID = msgID;
     }
@@ -158,6 +182,12 @@ public class AdvertisementPayload {
     }
 
     public byte[] getMsg() {
+        if (needRetriever) {
+            msg = msgRetriever.retrieve();// we need to go pull in the message
+            //check length of msg against len in header to make sure we have valid data
+            needRetriever = false;
+        }
+
         return msg;
     }
 
