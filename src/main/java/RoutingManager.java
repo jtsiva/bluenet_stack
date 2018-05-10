@@ -112,11 +112,20 @@ public class RoutingManager implements LayerIFace{
 		}
 
 		if (AdvertisementPayload.MAX_TTL - 1 == advPayload.getTTL()) { //1 hop neighbors
-			mLocalNodes.put(mID, advPayload.getSrcID());
+			List<String> neighbors = mLocalNodes.get(mID);
+
+			if (null == neighbors) {
+				neighbors = new ArrayList<String>();
+			}
+			String newNeighbor = new String(advPayload.getSrcID());
+			if (!neighbors.contains(newNeighbor)) {
+				neighbors.add(newNeighbor);
+				mLocalNodes.put(mID, neighbors);
+			}
 		}
-		else if (AdvertisementPayload.MAX_TTL - 2 == advPayload.getTTL()) {//2 hop neighbors
-			mLocalNodes.put(advPayload.getOneHopNeighbor(), advPayload.getSrcID());
-		}
+		// else if (AdvertisementPayload.MAX_TTL - 2 == advPayload.getTTL()) {//2 hop neighbors
+		// 	mLocalNodes.put(advPayload.getOneHopNeighbor(), advPayload.getSrcID());
+		// }
 
 
 		return retVal;
@@ -124,7 +133,9 @@ public class RoutingManager implements LayerIFace{
 	public int read(String src, byte [] message) {
 		throw new java.lang.UnsupportedOperationException("Not supported.");
 	}
-	public int write(AdvertisementPayload advPayload);
+	public int write(AdvertisementPayload advPayload) {
+		return mWriteCB.write(advPayload);
+	}
 	public int write(String dest, byte [] message) {
 		throw new java.lang.UnsupportedOperationException("Not supported.");
 	}

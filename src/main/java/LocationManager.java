@@ -17,6 +17,7 @@ public class LocationManager implements LayerIFace {
 		mIDLocationTable = new HashMap<String, LocationEntry>();
 		mReadCB = null;
 		mWriteCB = null;
+		mQueryCB = null;
 	}
 
 	// https://stackoverflow.com/questions/14308746/how-to-convert-from-a-float-to-4-bytes-in-java
@@ -39,15 +40,10 @@ public class LocationManager implements LayerIFace {
 			//msg.fromBytes(allBytes);
 			advPayload.setMsg (allBytes);
 
-			String result = mQueryCB.ask("GrpMgr.getCheckSum");
-			byte [] chksum = result.getBytes();
-
-			System.arraycopy(chksum, 0, allBytes, lat.length+lon.length, chksum.length);
-
 			advPayload.setMsgType(AdvertisementPayload.LOCATION_UPDATE);
 			advPayload.setSrcID(mID);
 
-			advPayload.setDestID(Group.BROADCAST_GROUP); //not sure if this really matters
+			advPayload.setDestID(Group.BROADCAST_GROUP); //eventually need to handle specific location update
 
 			mReadCB.read(advPayload);
 		}

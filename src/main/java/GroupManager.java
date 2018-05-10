@@ -31,17 +31,28 @@ public class GroupManager implements LayerIFace{
 		//	- pass message relevant to this device as srcID and String-----------------Not mutually exclusive
 
 
-		boolean found = false;
+		//we need to add the group table chksum to the location update
+		if (AdvertisementPayload.LOCATION_UPDATE == advPayload.getMsgType() && Objects.equals(mID, advPayload.getSrcID())) {
+			byte [] chksum = getChkSum();
+			byte [] msgBytes = advPayload.getMsg();
 
-		for (Group group: mGroups) {
-			if (Arrays.equals(group.getID(), advPayload.getDestID()) && group.getStatus()) {
-				found = true;
-			}
+			System.arraycopy(chksum, 0, msgBytes, 8, chksum.length);
+			advPayload.setMsg(msgBytes);
 		}
+		else {
 
-		// we belong to the group to which the message was addressed!
-		if (found) {
-			mReadCB.read(new String(advPayload.getSrcID()), advPayload.getMsg());
+			boolean found = false;
+
+			for (Group group: mGroups) {
+				if (Arrays.equals(group.getID(), advPayload.getDestID()) && group.getStatus()) {
+					found = true;
+				}
+			}
+
+			// we belong to the group to which the message was addressed!
+			if (found) {
+				mReadCB.read(new String(advPayload.getSrcID()), advPayload.getMsg());
+			}
 		}
 
 		// but more handling may still be required (such as forwarding)
