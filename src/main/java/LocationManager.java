@@ -22,31 +22,30 @@ public class LocationManager implements LayerIFace {
 
 	// https://stackoverflow.com/questions/14308746/how-to-convert-from-a-float-to-4-bytes-in-java
 	private void sendLocation() {
-		LocationEntry myLoc = mIDLocationTable.get(mID);
-		if (myLoc != null) {
-			AdvertisementPayload advPayload = new AdvertisementPayload();
 
-			byte[] lat = ByteBuffer.allocate(4).putFloat(getLocation(mID).mLatitude).array();
-			byte[] lon = ByteBuffer.allocate(4).putFloat(getLocation(mID).mLongitude).array();
-			//group checksum
+		AdvertisementPayload advPayload = new AdvertisementPayload();
 
-			//Query for standard header? final in relevant class?
+		byte[] lat = ByteBuffer.allocate(4).putFloat(getLocation(mID).mLatitude).array();
+		byte[] lon = ByteBuffer.allocate(4).putFloat(getLocation(mID).mLongitude).array();
+		//group checksum
 
-			byte[] allBytes = new byte[lat.length + lon.length + 2];
-			System.arraycopy(lat, 0, allBytes,0,lat.length);
-			System.arraycopy(lon, 0, allBytes,lat.length,lon.length);
+		//Query for standard header? final in relevant class?
+
+		byte[] allBytes = new byte[lat.length + lon.length + 2];
+		System.arraycopy(lat, 0, allBytes,0,lat.length);
+		System.arraycopy(lon, 0, allBytes,lat.length,lon.length);
 
 
-			//msg.fromBytes(allBytes);
-			advPayload.setMsg (allBytes);
+		//msg.fromBytes(allBytes);
+		advPayload.setMsg (allBytes);
 
-			advPayload.setMsgType(AdvertisementPayload.LOCATION_UPDATE);
-			advPayload.setSrcID(mID);
+		advPayload.setMsgType(AdvertisementPayload.LOCATION_UPDATE);
+		advPayload.setSrcID(mID);
 
-			advPayload.setDestID(Group.BROADCAST_GROUP); //eventually need to handle specific location update
+		advPayload.setDestID(Group.BROADCAST_GROUP); //eventually need to handle specific location update
 
-			mReadCB.read(advPayload);
-		}
+		mReadCB.read(advPayload);
+		
 	}
 
 	private int updateLocation(String id, float lat, float lon) {
@@ -70,7 +69,7 @@ public class LocationManager implements LayerIFace {
 		float lat =  ByteBuffer.wrap(latBytes).getFloat();
 		float lon =  ByteBuffer.wrap(lonBytes).getFloat();
 
-		System.out.println("Updating: " + id);
+		//System.out.println("Updating: " + id);
 
 		return this.updateLocation(id, lat, lon);
 	}
@@ -81,14 +80,17 @@ public class LocationManager implements LayerIFace {
 		LocationEntry entry = mIDLocationTable.get(id);
 		Coordinate coordAvg = new Coordinate();
 
-		for (Coordinate coord : entry.mCoordinates) {
-			coordAvg.mLatitude += coord.mLatitude;
-			coordAvg.mLongitude += coord.mLongitude;
-		}
+		if (null != entry) {
 
-		if (entry.mCoordinates.size() > 0) {
-			coordAvg.mLatitude /= entry.mCoordinates.size();
-			coordAvg.mLongitude /= entry.mCoordinates.size();
+			for (Coordinate coord : entry.mCoordinates) {
+				coordAvg.mLatitude += coord.mLatitude;
+				coordAvg.mLongitude += coord.mLongitude;
+			}
+
+			if (entry.mCoordinates.size() > 0) {
+				coordAvg.mLatitude /= entry.mCoordinates.size();
+				coordAvg.mLongitude /= entry.mCoordinates.size();
+			}
 		}
 
 
@@ -121,7 +123,7 @@ public class LocationManager implements LayerIFace {
 
 	private boolean sufficientData(String id) {
 		LocationEntry entry = mIDLocationTable.get(id);
-		return entry.mCoordinates.size() >= 2;
+		return entry != null && entry.mCoordinates.size() >= 2;
 	}
 
 	private float positionSpread(String id) {
@@ -193,7 +195,7 @@ public class LocationManager implements LayerIFace {
 
 	public int read(AdvertisementPayload advPayload)
 	{
-		System.out.println("Loc hit");
+		//System.out.println("Loc hit");
 		int result = 0;
 
 		if (advPayload.getMsgType() == AdvertisementPayload.LOCATION_UPDATE) {

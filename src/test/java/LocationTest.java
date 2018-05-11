@@ -3,6 +3,7 @@ package  nd.edu.bluenet_stack;
 import static org.junit.Assert.*;
 import org.junit.*;
 
+import java.nio.ByteBuffer;
 import java.util.*;
 
 
@@ -60,6 +61,49 @@ public class LocationTest {
 	}
 
 	@Test
+	public void shouldReturn0ForLocation() {
+		String result = mLocMgr.query("getLocation 1111");
+		String[] coord = result.split("\\s+");
+
+		assertEquals(0.0, Float.parseFloat(coord[0]), 0.000001);
+		assertEquals(0.0, Float.parseFloat(coord[1]), 0.000001);
+	}
+
+	@Test
+	public void shouldSendLocation() {
+		mLocMgr.query("sendLocation");
+
+		byte[] message = mAdvPayload.getMsg();
+
+		byte [] latBytes = Arrays.copyOfRange(message,0,4);
+		byte [] lonBytes = Arrays.copyOfRange(message,4,8);
+
+		float lat =  ByteBuffer.wrap(latBytes).getFloat();
+		float lon =  ByteBuffer.wrap(lonBytes).getFloat();
+
+		
+		assertEquals(0.0, lat, 0.000001);
+		assertEquals(0.0, lon, 0.000001);
+	}
+
+	@Test
+	public void shouldSendLocationOnSet() {
+		mLocMgr.query("setLocation 10.0 10.0");
+
+		byte[] message = mAdvPayload.getMsg();
+
+		byte [] latBytes = Arrays.copyOfRange(message,0,4);
+		byte [] lonBytes = Arrays.copyOfRange(message,4,8);
+
+		float lat =  ByteBuffer.wrap(latBytes).getFloat();
+		float lon =  ByteBuffer.wrap(lonBytes).getFloat();
+
+		
+		assertEquals(10.0, lat, 0.000001);
+		assertEquals(10.0, lon, 0.000001);
+	}
+
+	@Test
 	public void shouldSetAndGetSimpleLocation() {
 		mLocMgr.query("setLocation 10.0 10.0");
 		String result = mLocMgr.query("getLocation 1111");
@@ -82,8 +126,258 @@ public class LocationTest {
 		assertEquals(-86.2445672, Float.parseFloat(coord[1]), 0.00001);
 	}
 
-	@Ignore("not there yet!")
-	public void shouldCreateNewEntry() {
-		assertTrue(false);
+	@Test
+	public void shouldGetFromLocationPayload() {
+		String a = "2222";
+
+		AdvertisementPayload advPayload = new AdvertisementPayload();
+
+		float latitude = 41.703799f;
+		float longitude = -86.239010f;
+		byte[] lat = ByteBuffer.allocate(4).putFloat(latitude).array();
+		byte[] lon = ByteBuffer.allocate(4).putFloat(longitude).array();
+
+		byte[] allBytes = new byte[lat.length + lon.length+2];
+		System.arraycopy(lat, 0, allBytes,0,lat.length);
+		System.arraycopy(lon, 0, allBytes,lat.length,lon.length);
+
+		//msg.fromBytes(allBytes);
+		advPayload.setMsg (allBytes);
+		advPayload.setMsgType(AdvertisementPayload.LOCATION_UPDATE);
+		advPayload.setSrcID(a);
+		advPayload.setDestID(Group.BROADCAST_GROUP);
+		advPayload.setMsgID((byte)0b0);
+
+		mLocMgr.read(advPayload);
+
+		String result = mLocMgr.query("getLocation 2222");
+		//System.out.println(result);
+		
+		String[] coord = result.split("\\s+");
+		//System.out.println(Float.parseFloat(coord[0]));
+		assertEquals(41.703799f, Float.parseFloat(coord[0]), 0.00001);
+		assertEquals(-86.239010f, Float.parseFloat(coord[1]), 0.00001);
+	}
+
+	@Test
+	public void shouldBeInDirection() {
+		//set location
+
+		mLocMgr.query("setLocation 41.6926321 -86.2445672");
+
+		//send location update packets (as if from another node)
+
+		String a = "2222";
+		String b = "3333";
+
+		AdvertisementPayload advPayload = new AdvertisementPayload();
+
+		float latitude = 41.703799f;
+		float longitude = -86.239010f;
+		byte[] lat = ByteBuffer.allocate(4).putFloat(latitude).array();
+		byte[] lon = ByteBuffer.allocate(4).putFloat(longitude).array();
+
+		byte[] allBytes = new byte[lat.length + lon.length+2];
+		System.arraycopy(lat, 0, allBytes,0,lat.length);
+		System.arraycopy(lon, 0, allBytes,lat.length,lon.length);
+
+		//msg.fromBytes(allBytes);
+		advPayload.setMsg (allBytes);
+		advPayload.setMsgType(AdvertisementPayload.LOCATION_UPDATE);
+		advPayload.setSrcID(a);
+		advPayload.setDestID(Group.BROADCAST_GROUP);
+		advPayload.setMsgID((byte)0b0);
+
+		mLocMgr.read(advPayload);
+
+
+		advPayload = new AdvertisementPayload();
+		latitude = 41.681207f;
+		longitude = -86.228968f;
+		lat = ByteBuffer.allocate(4).putFloat(latitude).array();
+		lon = ByteBuffer.allocate(4).putFloat(longitude).array();
+
+		
+		System.arraycopy(lat, 0, allBytes,0,lat.length);
+		System.arraycopy(lon, 0, allBytes,lat.length,lon.length);
+
+		//msg.fromBytes(allBytes);
+		advPayload.setMsg (allBytes);
+		advPayload.setMsgType(AdvertisementPayload.LOCATION_UPDATE);
+		advPayload.setSrcID(b);
+		advPayload.setDestID(Group.BROADCAST_GROUP);
+		advPayload.setMsgID((byte)0b0);
+
+		mLocMgr.read(advPayload);
+
+		assertEquals("true", mLocMgr.query("inDirection " + a + " " + b));
+	}
+
+	@Test
+	public void shouldNotBeInDirection () {
+		mLocMgr.query("setLocation 41.715011 -86.250768");
+
+		//send location update packets (as if from another node)
+
+		String a = "2222";
+		String b = "3333";
+
+		AdvertisementPayload advPayload = new AdvertisementPayload();
+
+		float latitude = 41.703799f;
+		float longitude = -86.239010f;
+		byte[] lat = ByteBuffer.allocate(4).putFloat(latitude).array();
+		byte[] lon = ByteBuffer.allocate(4).putFloat(longitude).array();
+
+		byte[] allBytes = new byte[lat.length + lon.length+2];
+		System.arraycopy(lat, 0, allBytes,0,lat.length);
+		System.arraycopy(lon, 0, allBytes,lat.length,lon.length);
+
+		//msg.fromBytes(allBytes);
+		advPayload.setMsg (allBytes);
+		advPayload.setMsgType(AdvertisementPayload.LOCATION_UPDATE);
+		advPayload.setSrcID(a);
+		advPayload.setDestID(Group.BROADCAST_GROUP);
+		advPayload.setMsgID((byte)0b0);
+
+		mLocMgr.read(advPayload);
+
+
+		advPayload = new AdvertisementPayload();
+		latitude = 41.681207f;
+		longitude = -86.228968f;
+		lat = ByteBuffer.allocate(4).putFloat(latitude).array();
+		lon = ByteBuffer.allocate(4).putFloat(longitude).array();
+
+		
+		System.arraycopy(lat, 0, allBytes,0,lat.length);
+		System.arraycopy(lon, 0, allBytes,lat.length,lon.length);
+
+		//msg.fromBytes(allBytes);
+		advPayload.setMsg (allBytes);
+		advPayload.setMsgType(AdvertisementPayload.LOCATION_UPDATE);
+		advPayload.setSrcID(b);
+		advPayload.setDestID(Group.BROADCAST_GROUP);
+		advPayload.setMsgID((byte)0b0);
+
+		mLocMgr.read(advPayload);
+
+		assertEquals("false", mLocMgr.query("inDirection " + a + " " + b));
+	}
+
+	@Test
+	public void shouldGetNeighbors() {
+		String a = "2222";
+		String b = "3333";
+
+		AdvertisementPayload advPayload = new AdvertisementPayload();
+
+		float latitude = 41.703799f;
+		float longitude = -86.239010f;
+		byte[] lat = ByteBuffer.allocate(4).putFloat(latitude).array();
+		byte[] lon = ByteBuffer.allocate(4).putFloat(longitude).array();
+
+		byte[] allBytes = new byte[lat.length + lon.length+2];
+		System.arraycopy(lat, 0, allBytes,0,lat.length);
+		System.arraycopy(lon, 0, allBytes,lat.length,lon.length);
+
+		//msg.fromBytes(allBytes);
+		advPayload.setMsg (allBytes);
+		advPayload.setMsgType(AdvertisementPayload.LOCATION_UPDATE);
+		advPayload.setSrcID(a);
+		advPayload.setDestID(Group.BROADCAST_GROUP);
+		advPayload.setMsgID((byte)0b0);
+
+		mLocMgr.read(advPayload);
+
+
+		advPayload = new AdvertisementPayload();
+		latitude = 41.681207f;
+		longitude = -86.228968f;
+		lat = ByteBuffer.allocate(4).putFloat(latitude).array();
+		lon = ByteBuffer.allocate(4).putFloat(longitude).array();
+
+		
+		System.arraycopy(lat, 0, allBytes,0,lat.length);
+		System.arraycopy(lon, 0, allBytes,lat.length,lon.length);
+
+		//msg.fromBytes(allBytes);
+		advPayload.setMsg (allBytes);
+		advPayload.setMsgType(AdvertisementPayload.LOCATION_UPDATE);
+		advPayload.setSrcID(b);
+		advPayload.setDestID(Group.BROADCAST_GROUP);
+		advPayload.setMsgID((byte)0b0);
+
+		mLocMgr.read(advPayload);
+
+		String res = mLocMgr.query("getNeighbors");
+		String[]parts = res.split("\\s+");
+		assertTrue(Objects.equals(parts[0], "2222") || Objects.equals(parts[1], "2222"));
+		assertTrue(Objects.equals(parts[0], "3333") || Objects.equals(parts[1], "3333"));
+	}
+
+	@Test
+	public void shouldReturn0PositionSpreadWithNoPositionSet () {
+		//mLocMgr.query("setLocation 41.715011 -86.250768");
+
+		String result = mLocMgr.query("getPositionSpread 1111");
+		//System.out.println(result);
+		
+		String[] res = result.split("\\s+");
+		//System.out.println(Float.parseFloat(coord[0]));
+		assertEquals(0.0f, Float.parseFloat(res[0]), 0.00001);
+
+	}
+
+	@Test
+	public void shouldReturn0PositionSpreadWithOnePositionSet () {
+		mLocMgr.query("setLocation 41.715011 -86.250768");
+
+		String result = mLocMgr.query("getPositionSpread 1111");
+		//System.out.println(result);
+		
+		String[] res = result.split("\\s+");
+		//System.out.println(Float.parseFloat(coord[0]));
+		assertEquals(0.0f, Float.parseFloat(res[0]), 0.00001);
+
+	}
+
+	@Test
+	public void shouldReturnPositionSpreadWithTwoLocs () {
+		//values based on estimation formula: https://gis.stackexchange.com/questions/2951/algorithm-for-offsetting-a-latitude-longitude-by-some-amount-of-meters
+		mLocMgr.query("setLocation 1.0 1.0");
+		mLocMgr.query("setLocation 1.0009 1.0");
+
+		//NOTE: using meanSquaredDisplacemet
+		String result = mLocMgr.query("getPositionSpread 1111");
+		//System.out.println(result);
+		
+		String[] res = result.split("\\s+");
+		//System.out.println(Float.parseFloat(coord[0]));
+		assertEquals(5000.0f, Float.parseFloat(res[0]), 10.0);
+
+	}
+
+	@Test
+	public void shouldReturnPositionSpreadWithFullWindow () {
+		//values based on estimation formula: https://gis.stackexchange.com/questions/2951/algorithm-for-offsetting-a-latitude-longitude-by-some-amount-of-meters
+		mLocMgr.query("setLocation 1.0 1.0");
+		mLocMgr.query("setLocation 1.0009 1.0"); //100*100
+		mLocMgr.query("setLocation 1.0009 0.999099"); //141.42*141.42
+		mLocMgr.query("setLocation 1.0 0.999099"); //100*100
+		mLocMgr.query("setLocation 1.0 1.0"); //0
+		//---------------------------------------------------------
+		//sum
+		//    /= 5
+		// ~8000
+
+		//NOTE: using meanSquaredDisplacemet
+		String result = mLocMgr.query("getPositionSpread 1111");
+		//System.out.println(result);
+		
+		String[] res = result.split("\\s+");
+		//System.out.println(Float.parseFloat(coord[0]));
+		assertEquals(8000.0f, Float.parseFloat(res[0]), 50.0);
+
 	}
 }
