@@ -178,7 +178,7 @@ public class AdvertisementPayload {
 
     public void setMsg(byte[] msg) {
         this.len = (byte)msg.length;
-        this.msg = msg;
+        this.msg = msg.clone();
     }
 
     public byte[] getMsg() {

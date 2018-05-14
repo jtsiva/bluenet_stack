@@ -3,7 +3,7 @@ package nd.edu.bluenet_stack;
 import java.util.*;
 
 public class MessageLayer implements LayerIFace {
-	private final static int SMALL_MSG_MAX = 20;
+	private final static int SMALL_MSG_MAX = 10;
 	protected Reader mReadCB;
 	protected Writer mWriteCB;
 	protected Query mQueryCB;
@@ -53,15 +53,19 @@ public class MessageLayer implements LayerIFace {
 			Double check that message type is correct (only pass up small/reg messages)
 			handle message sequencing?
 		*/
-		System.out.println("ML hit");
+		//System.out.println("ML hit");
 		if (isNew(advPayload)) { //no repeats!
-			if (advPayload.getMsgType() == AdvertisementPayload.SMALL_MESSAGE 
-				|| advPayload.getMsgType() == AdvertisementPayload.REGULAR_MESSAGE) { //correct type!
-				return mReadCB.read(new String(advPayload.getSrcID()), advPayload.getMsg());
-			}
-			else {
+
+			// We could allow this sort of short circuiting type of message passing, but we wouldn't be
+			// able to capture complete network statistics at the routing layer then.
+
+			// if (advPayload.getMsgType() == AdvertisementPayload.SMALL_MESSAGE 
+			// 	|| advPayload.getMsgType() == AdvertisementPayload.REGULAR_MESSAGE) { //correct type!
+			// 	return mReadCB.read(new String(advPayload.getSrcID()), advPayload.getMsg());
+			// }
+			// else {
 				return mReadCB.read(advPayload);
-			}
+			//}
 		}
 		
 		return 0;
@@ -76,7 +80,7 @@ public class MessageLayer implements LayerIFace {
 				set src id
 				add message to newly created advertisement
 		*/
-		System.out.println("ML hit");
+		//System.out.println("ML hit");
 
 		AdvertisementPayload advPayload = new AdvertisementPayload();
 
@@ -90,12 +94,9 @@ public class MessageLayer implements LayerIFace {
 		advPayload.setSrcID(mQueryCB.ask("global.id"));
 		advPayload.setDestID(dest);
 
-		advPayload.setMsgID(mMsgIndex);
-		mMsgIndex++;
-
 		advPayload.setMsg(message);
 
-		return mWriteCB.write(advPayload);
+		return this.write(advPayload);
 	}
 
 	public int read(String src, byte[] message) {
@@ -104,13 +105,11 @@ public class MessageLayer implements LayerIFace {
 	public int write(AdvertisementPayload advPayload) {
 		// If we receive an AdvertisementPayload, it's safe to assume that all necessary
 		// fields have been filled out except for the msgID which can only be set here.
-		advPayload.setMsgID(mMsgIndex);
-		mMsgIndex++;
+		// However, we do not want to change the msgID of a forwarded message!
 
-		//If we are sending a location update then we want to append a 2 byte checksum
-		//for the group table.
-		if (advPayload.getMsgType() == AdvertisementPayload.LOCATION_UPDATE) {
-			//append checksum in last two bytes
+		if (Objects.equals(mQueryCB.ask("global.id"), new String(advPayload.getSrcID()))) {
+			advPayload.setMsgID(mMsgIndex);
+			mMsgIndex++;
 		}
 
 		return mWriteCB.write(advPayload);
