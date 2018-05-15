@@ -1,5 +1,7 @@
 package nd.edu.bluenet_stack;
 
+import java.sql.Timestamp;
+import java.nio.ByteBuffer;
 import java.util.*;
 
 public class GroupManager implements LayerIFace{
@@ -7,6 +9,7 @@ public class GroupManager implements LayerIFace{
 	protected Writer mWriteCB;
 	protected Query mQueryCB;
 	private ArrayList<Group> mGroups = new ArrayList<>();
+	private Timestamp mLastUpdate = null;
 	private String mID; 
 
 	public void setReadCB (Reader reader) {
@@ -38,6 +41,42 @@ public class GroupManager implements LayerIFace{
 
 			System.arraycopy(chksum, 0, msgBytes, 8, chksum.length);
 			advPayload.setMsg(msgBytes);
+		}
+		else if (AdvertisementPayload.LOCATION_UPDATE == advPayload.getMsgType() && !Objects.equals(mID, advPayload.getSrcID())) {
+			byte [] chksum = byte [2];
+			//QUESTION: should we restrict group updates to 1 hop neighbors?
+			//there is a verification step that could result in many group 
+			//queries from 2nd and even 3rd hop neighbors
+
+			//check to see if the checksum matches ours
+			System.arraycopy(advPayload.getMsg(), 8, chksum, chksum.length);
+
+			//if it doesn't then we need to find out whether the sender has a more up to date
+			//list of groups
+			if (!Arrays.equals(chksum, getChkSum())) {
+				//send group query with timestamp
+				AdvertisementPayload newAdv = new AdvertisementPayload();
+				newAdv.setSrcID(mID);
+				newAdv.setDestID(advPayload.getSrcID());
+				newAdv.setMsgType(AdvertisementPayload.GROUP_QUERY);
+				long lastUpdate = 0L;
+				if (null != mLastUpdate) {
+					lastUpdate = mLastUpdate.getTime();
+				}
+				newAdv.setMsg(ByteBuffer.allocate(8).putLong(lastUpdate).array())
+
+				mReadCB.read(newAdv);
+
+			}
+		}
+		else if (AdvertisementPayload.GROUP_UPDATE == advPayload.getMsgType()) {
+			//someone has responded to our group query with an update
+			//parse group table in message
+
+		}
+		else if (AdvertisementPayload.GROUP_QUERY == advPayload.getMsgType()) {
+			//someone else is querying for our group table
+			//check their timestamp against ours (assumes synchronized clocks!!!)
 		}
 		else {
 

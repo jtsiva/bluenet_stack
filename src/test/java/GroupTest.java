@@ -10,9 +10,42 @@ import java.util.*;
 public class GroupTest {
 	private final static String MY_ID = "1111";
 	private AdvertisementPayload mAdvPayload = null;
+	private GroupManager mGrpMgr;
 
 	@Before
 	public void setup() {
+		mGrpMgr = new GroupManager();
+		mGrpMgr.setQueryCB(new Query() {
+			public String ask(String question) {
+				String returnString = "";
+				if (Objects.equals(question, "global.id")) {
+					returnString = "1111";
+				}
+
+				return returnString;
+			}
+		});
+
+		mGrpMgr.setWriteCB(new Writer () {
+			public int write(AdvertisementPayload advPayload) {
+				mAdvPayload = advPayload;
+				return 0;
+			}
+			public int write(String dest, byte[] message) {
+				throw new java.lang.UnsupportedOperationException("Not supported.");
+			}
+		});
+
+		mGrpMgr.setReadCB(new Reader () {
+			public int read(AdvertisementPayload advPayload) {
+				mAdvPayload = advPayload;
+				return 0;
+			}
+
+			public int read(String src, byte[] message) {
+				throw new java.lang.UnsupportedOperationException("Not supported.");
+			}
+		});
 	}
 
 	//Base group tests
@@ -93,5 +126,17 @@ public class GroupTest {
 		GeoGroup grp = new GeoGroup(MY_ID, 10.005f,-35.12345f,15f);
 		grp.join(11f, -35.12345f);
 		assertTrue(!grp.getStatus());
+	}
+
+	// Group manager
+
+	@Test
+	public void shouldInit() {
+		assertNotNull(mGrpMgr);
+	}
+
+	@Test
+	public void shouldReturnTag() {
+		assertEquals("GrpMgr", mGrpMgr.query("tag"));
 	}
 }

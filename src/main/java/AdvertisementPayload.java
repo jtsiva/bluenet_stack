@@ -13,8 +13,8 @@ public class AdvertisementPayload {
     public final static int REGULAR_MESSAGE = 0x1869; //push or pull based on size of advertisement
     //public final static int REGULAR_PULL_MESSAGE = 0x186E;// pull option
     public final static int LOCATION_UPDATE = 0x1868; //always a push
-    public final static int GROUP_ADVERTISE = 0x186B;
-    //public final static byte GROUP_QUERY = 0x186C;
+    public final static int GROUP_UPDATE = 0x186B;
+    public final static int GROUP_QUERY = 0x186C;
     //public final static byte GROUP_REGISTER = 0x186D;
 
     public final static byte MAX_TTL = 0b11;
