@@ -6,6 +6,7 @@ import java.nio.charset.StandardCharsets;
 public class Group {
 	public final static String BROADCAST_GROUP = "0000";
 
+	public final static int NONE = -1;
 	public final static int NAMED_GROUP = 0;
 	public final static int GEO_GROUP = 1;
 	public final static int SECURE_GROUP = 2;
@@ -17,7 +18,7 @@ public class Group {
 
 	public Group() {
 		mID = BROADCAST_GROUP;
-		mType = -1;//non-existent type
+		mType = NONE;
 		mJoined = false;
 	}
 
