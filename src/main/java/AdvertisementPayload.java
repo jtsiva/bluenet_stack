@@ -176,6 +176,10 @@ public class AdvertisementPayload {
         }
     }
 
+    public byte getMsgLength() {
+        return this.len;
+    }
+
     public void setMsg(byte[] msg) {
         this.len = (byte)msg.length;
         this.msg = msg.clone();
