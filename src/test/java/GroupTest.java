@@ -76,6 +76,13 @@ public class GroupTest {
 		assertTrue(!grp.getStatus());
 	}
 
+	@Test
+	public void shouldBeEqual() {
+		Group grp = new Group(MY_ID, Group.NONE);
+		Group other = new Group(MY_ID, Group.NONE);
+		assertEquals(grp, other);
+	}
+
 	//Named group
 
 	@Test

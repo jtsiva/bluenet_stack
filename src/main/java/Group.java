@@ -28,6 +28,28 @@ public class Group {
 		mJoined = false;
 	}
 
+	@Override
+    public boolean equals(Object obj) {
+        if (this == obj) {
+            return true;
+        }
+
+        if (obj == null) {
+            return false;
+        }
+
+        if (getClass() != obj.getClass()){
+            return false;
+        }
+
+        Group other = (Group)obj;
+        if (!Objects.equals(mID, other.getID())) {
+            return false;
+        }
+
+        return true;
+    }
+
 	public byte[] getID () {
 		return mID.getBytes(StandardCharsets.UTF_8);
 	}

@@ -3,12 +3,14 @@ package nd.edu.bluenet_stack;
 import java.sql.Timestamp;
 import java.nio.ByteBuffer;
 import java.util.*;
+import java.nio.charset.StandardCharsets;
 
 public class GroupManager implements LayerIFace{
+	public long deleteThreshold = 30000L;//30 seconds (DEBUG)  //1800000L; //30 minutes
 	protected Reader mReadCB;
 	protected Writer mWriteCB;
 	protected Query mQueryCB;
-	private ArrayList<Group> mGroups = new ArrayList<>();
+	private List<GroupEntry> mGroups = new ArrayList<GroupEntry>();
 	private Timestamp mLastUpdate = null;
 	private String mID; 
 
@@ -46,7 +48,7 @@ public class GroupManager implements LayerIFace{
 			byte [] chksum = byte [2];
 			//QUESTION: should we restrict group updates to 1 hop neighbors?
 			//there is a verification step that could result in many group 
-			//queries from 2nd and even 3rd hop neighbors
+			//queries from 2nd and even 3rd hop neighbors (likely handled by routing layer)
 
 			//check to see if the checksum matches ours
 			System.arraycopy(advPayload.getMsg(), 8, chksum, chksum.length);
@@ -66,25 +68,71 @@ public class GroupManager implements LayerIFace{
 				newAdv.setMsg(ByteBuffer.allocate(8).putLong(lastUpdate).array())
 
 				mReadCB.read(newAdv);
-
 			}
-		}
-		else if (AdvertisementPayload.GROUP_UPDATE == advPayload.getMsgType()) {
-			//someone has responded to our group query with an update
-			//parse group table in message
-
 		}
 		else if (AdvertisementPayload.GROUP_QUERY == advPayload.getMsgType()) {
 			//someone else is querying for our group table
 			//check their timestamp against ours (assumes synchronized clocks!!!)
+
+			//from: https://stackoverflow.com/questions/4485128/how-do-i-convert-long-to-byte-and-back-in-java/29132118#29132118
+			long time = ByteBuffer.allocate(Long.BYTES).put(advPayload.getMsg()).flip().getLong();
+		   
+		   	if (time > mLastUpdate.getTime()) {
+		   		//send group update message containing group table
+				AdvertisementPayload newAdv = new AdvertisementPayload();
+				newAdv.setSrcID(mID);
+				newAdv.setDestID(advPayload.getSrcID());
+				newAdv.setMsgType(AdvertisementPayload.GROUP_UPDATE);
+				String groupTable = query("getGroups");
+				newAdv.setMsg(groupTable.getBytes(StandardCharsets.UTF_8))
+
+				mReadCB.read(newAdv);
+		   	}
+
+		}
+		else if (AdvertisementPayload.GROUP_UPDATE == advPayload.getMsgType()) {
+			//someone has responded to our group query with an update
+			//parse group table in message
+			String groupTable = new String(advPayload.getMsg());
+			String [] parts = groupTable.split("\\s+");
+
+			for (int i = 0; i < parts.length; i++) {
+				String id = parts[i];
+				int type = Integer.parseInt(parts[i+1]);
+				Group tmpGrp = new Group(id, type);
+
+				if (Group.NAMED_GROUP == type) {
+					NamedGroup newGrp = new NamedGroup(id, parts[i+2]);
+					i += 2;
+				}
+				else if (Group.GEO_GROUP == type) {
+					GeoGroup newGrp = new GeoGroup(id, Float.parseFloat(parts[i+2]),Float.parseFloat(parts[i+3]),Float.parseFloat(parts[i+4]));
+					i += 4;
+				}
+
+				//if the group already exists in the table, do nothing since groups are immutable
+				if (!mGroups.contains(tmpGrp)) {
+					GroupEntry grpEntry = new GroupEntry(newGrp);
+					mLastUpdate = grpEntry.mTimestamp;
+					mGroups.add(grpEntry);
+				}
+
+				
+			}
+
 		}
 		else {
 
 			boolean found = false;
 
-			for (Group group: mGroups) {
-				if (Arrays.equals(group.getID(), advPayload.getDestID()) && group.getStatus()) {
-					found = true;
+			for (GroupEntry groupEntry: mGroups) {
+				//check if we have the group in our table
+				if (Arrays.equals(groupEntry.mGroup.getID(), advPayload.getDestID())) {
+					groupEntry.update();// clearly, there is activity on group, so update timestamp
+
+					if (groupEntry.mGroup.getStatus()) { //if we have joined this group
+						found = true;
+					}
 				}
 			}
 
@@ -134,23 +182,78 @@ public class GroupManager implements LayerIFace{
 				}
 			}
 		}
+		else if (Objects.equals(parts[0], "addGroup")) {
+			//can provide:
+			//name
+			//or
+			//latitude longitude radius
+
+			//need to ask for new ID -- probably handled by stack container
+			//update mLastUpdate
+
+			boolean bueno = true;
+			String newID = mQueryCB.ask("global.getNewID");
+			if (2 == parts.length) {
+				NamedGroup grp = new NamedGroup(newID, parts[1]);
+			}
+			else if (4 == parts.length) {
+				GeoGroup grp = new GeoGroup(newID, Float.parseFloat(parts[1]), Float.parseFloat(parts[2]), Float.parseFloat(parts[3]));
+			}
+			else {
+				bueno = false;
+			}
+
+			if (bueno) {
+				GroupEntry grpEntry = new GroupEntry(grp);
+				mLastUpdate = grpEntry.mTimestamp;
+				mGroups.add(grpEntry);
+				resultString = "ok";
+			}
+			else {
+				resultString = "fail";
+			}
+
+		}
 		else if (Objects.equals(parts[0], "getGroups")) {
-			for (Group group: mGroups) {
+			for (GroupEntry groupEntry: mGroups) {
+				resultString += groupEntry.mGroup.getID() + " " + new String(groupEntry.mGroup.getType()) + " ";
+				
 				if (Group.NAMED_GROUP == group.getType()) {
-					NamedGroup tmpGrp = (NamedGroup)group;
-					resultString += new String(tmpGrp.getID()) + " " + tmpGrp.getName() + ",";
+					NamedGroup tmpGrp = (NamedGroup)groupEntry.mGroup;
+					resultString += tmpGrp.getName() + " ";
 				}
+				else if (Group.GEO_GROUP == group.type()) {
+					GeoGroup tmpGrp = (GeoGroup)groupEntry.mGroup;
+					resultString += String.valueOf(tmpGrp.getLatitude()) + " " + String.valueOf(tmpGrp.getLongitude()) + " " + String.valueOf(tmpGrp.getRadius()) + " ";
+				}
+
+				//don't need to append time stamp since no one needs to know that--for internal use only
 			}
 		}
 		else if (Objects.equals(parts[0], "joinGroups")) {
-			for (Group group: mGroups) {
-				if (Objects.equals(parts[1], group.getID())) {
-					group.join();
+			resultString = "fail";
+			for (GroupEntry groupEntry.mGroup: mGroups) {
+				if (Objects.equals(parts[1], groupEntry.mGroup.getID())) {
+					groupEntry.mGroup.join();
+					resultString = "ok";
 				}
 			}
 		}
 		else if (Objects.equals(parts[0], "cleanupGroups")) {
 			//remove group if we haven't used it in a while
+
+			//from: https://stackoverflow.com/questions/10431981/remove-elements-from-collection-while-iterating
+
+			List<GroupEntry> found = new ArrayList<GroupEntry>();
+
+			for (GroupEntry groupEntry: mGroups) {
+				if (System.currentTimeMillis() - groupEntry.mTimestamp.getTime() > deleteThreshold) {
+					found.add(groupEntry);
+				}
+			}
+
+			mGroups.removeAll(found);
+
 		}
 		else if (Objects.equals(parts[0], "getCheckSum")) {
 			resultString = new String(getChkSum());
