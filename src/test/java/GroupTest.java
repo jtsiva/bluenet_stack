@@ -6,15 +6,21 @@ import org.junit.*;
 import java.nio.ByteBuffer;
 import java.util.*;
 
+import java.nio.charset.StandardCharsets;
+
 
 public class GroupTest {
 	private final static String MY_ID = "1111";
-	private AdvertisementPayload mAdvPayload = null;
+	private List<AdvertisementPayload> mAdvPayloads = new ArrayList<AdvertisementPayload>();
+	private String mMessage = "";
 	private GroupManager mGrpMgr;
 	private int id = 0;
 
 	@Before
 	public void setup() {
+		mAdvPayloads = new ArrayList<AdvertisementPayload>();
+		mMessage = "";
+		id = 0;
 		mGrpMgr = new GroupManager();
 		mGrpMgr.setQueryCB(new Query() {
 			public String ask(String question) {
@@ -33,7 +39,7 @@ public class GroupTest {
 
 		mGrpMgr.setWriteCB(new Writer () {
 			public int write(AdvertisementPayload advPayload) {
-				mAdvPayload = advPayload;
+				mAdvPayloads.add(advPayload);
 				return 0;
 			}
 			public int write(String dest, byte[] message) {
@@ -43,12 +49,13 @@ public class GroupTest {
 
 		mGrpMgr.setReadCB(new Reader () {
 			public int read(AdvertisementPayload advPayload) {
-				mAdvPayload = advPayload;
+				mAdvPayloads.add(advPayload);
 				return 0;
 			}
 
 			public int read(String src, byte[] message) {
-				throw new java.lang.UnsupportedOperationException("Not supported.");
+				mMessage = new String(message);
+				return 0;
 			}
 		});
 	}
@@ -207,5 +214,195 @@ public class GroupTest {
 	@Test
 	public void shouldSetChkSum() {
 		AdvertisementPayload advPayload = new AdvertisementPayload();
+		advPayload.setMsgType(AdvertisementPayload.LOCATION_UPDATE);
+		advPayload.setSrcID(MY_ID);
+		mGrpMgr.read(advPayload);
+		byte [] msg = mAdvPayloads.get(0).getMsg();
+		byte [] chksum = new byte[2];
+
+		System.arraycopy(msg, 8, chksum, 0, 2);
+
+		assertTrue(Arrays.equals(new byte[] {-1,-1},chksum));
+	}
+
+	@Test
+	public void shouldCheckChkSumNotSendQuery() {
+		AdvertisementPayload advPayload = new AdvertisementPayload();
+		advPayload.setMsgType(AdvertisementPayload.LOCATION_UPDATE);
+		advPayload.setSrcID("2222");
+		byte [] msg = new byte[10];
+		msg[8] = (byte)-1;
+		msg[9] = (byte)-1;
+		//set a chk sum that will match
+		advPayload.setMsg(msg);
+		mGrpMgr.read(advPayload);
+		assertEquals(1, mAdvPayloads.size());
+		assertEquals(advPayload, mAdvPayloads.get(0));
+	}
+
+	@Test
+	public void shouldCheckChkSumSendQueryEmptyGroupTable() {
+		AdvertisementPayload advPayload = new AdvertisementPayload();
+		advPayload.setMsgType(AdvertisementPayload.LOCATION_UPDATE);
+		advPayload.setSrcID("2222");
+		byte [] msg = new byte[10];
+		msg[8] = (byte)0;
+		msg[9] = (byte)0;
+		//set a chk sum that will not match
+		advPayload.setMsg(msg);
+		mGrpMgr.read(advPayload);
+		assertEquals(2, mAdvPayloads.size());
+		assertEquals(advPayload, mAdvPayloads.get(1));
+		assertEquals(AdvertisementPayload.GROUP_QUERY, mAdvPayloads.get(0).getMsgType());
+		ByteBuffer buffer = ByteBuffer.allocate(Long.BYTES);
+		buffer.put(mAdvPayloads.get(0).getMsg());
+		buffer.flip();
+		assertEquals(0, buffer.getLong());
+	}
+
+	@Test
+	public void shouldCheckChkSumSendQueryNonEmptyGroupTable() {
+		mGrpMgr.query("addGroup blargity_blarg");
+		AdvertisementPayload advPayload = new AdvertisementPayload();
+		advPayload.setMsgType(AdvertisementPayload.LOCATION_UPDATE);
+		advPayload.setSrcID("2222");
+		byte [] msg = new byte[10];
+		msg[8] = (byte)0;
+		msg[9] = (byte)0;
+		//set a chk sum that will not match
+		advPayload.setMsg(msg);
+		mGrpMgr.read(advPayload);
+		assertEquals(2, mAdvPayloads.size());
+		assertEquals(advPayload, mAdvPayloads.get(1));
+		assertEquals(AdvertisementPayload.GROUP_QUERY, mAdvPayloads.get(0).getMsgType());
+		ByteBuffer buffer = ByteBuffer.allocate(Long.BYTES);
+		buffer.put(mAdvPayloads.get(0).getMsg());
+		buffer.flip();
+		assertTrue(0 != buffer.getLong());
+	}
+
+	@Test
+	public void shouldCheckQueryTimestampDoNothing(){
+		AdvertisementPayload advPayload = new AdvertisementPayload();
+		advPayload.setMsgType(AdvertisementPayload.GROUP_QUERY);
+		advPayload.setSrcID("2222");
+		advPayload.setMsg(ByteBuffer.allocate(8).putLong(0L).array()); //I will not have a newer timestamp than them
+		mGrpMgr.read(advPayload);
+		assertEquals(1, mAdvPayloads.size());
+		assertEquals(AdvertisementPayload.GROUP_QUERY, mAdvPayloads.get(0).getMsgType());
+	}
+
+	@Test
+	public void shouldCheckQueryTimestampSendGroupUpdateNamedGroup(){
+		mGrpMgr.query("addGroup blargity_blarg");
+		AdvertisementPayload advPayload = new AdvertisementPayload();
+		advPayload.setMsgType(AdvertisementPayload.GROUP_QUERY);
+		advPayload.setSrcID("2222");
+		advPayload.setMsg(ByteBuffer.allocate(8).putLong(0L).array()); //I will have a newer timestamp than them
+		mGrpMgr.read(advPayload);
+		
+		assertEquals(2, mAdvPayloads.size());
+		assertEquals(advPayload, mAdvPayloads.get(1));
+		assertEquals(AdvertisementPayload.GROUP_UPDATE, mAdvPayloads.get(0).getMsgType());
+		
+		String groups = new String(mAdvPayloads.get(0).getMsg());
+		String [] parts = groups.split("\\s+");
+		assertEquals("1110", parts[0]);
+		assertEquals("0", parts[1]);
+		assertEquals("blargity_blarg", parts[2]);
+	}
+
+	@Test
+	public void shouldCheckQueryTimestampSendGroupUpdateGeoGroup(){
+		mGrpMgr.query("addGroup 10.0 10.0 10.0");
+		AdvertisementPayload advPayload = new AdvertisementPayload();
+		advPayload.setMsgType(AdvertisementPayload.GROUP_QUERY);
+		advPayload.setSrcID("2222");
+		advPayload.setMsg(ByteBuffer.allocate(8).putLong(0L).array()); //I will have a newer timestamp than them
+		mGrpMgr.read(advPayload);
+		
+		assertEquals(2, mAdvPayloads.size());
+		assertEquals(advPayload, mAdvPayloads.get(1));
+		assertEquals(AdvertisementPayload.GROUP_UPDATE, mAdvPayloads.get(0).getMsgType());
+		
+		String groups = new String(mAdvPayloads.get(0).getMsg());
+		String [] parts = groups.split("\\s+");
+		assertEquals("1110", parts[0]);
+		assertEquals("1", parts[1]);
+		assertEquals(10.0, Float.parseFloat(parts[2]), .00001);
+		assertEquals(10.0, Float.parseFloat(parts[3]), .00001);
+		assertEquals(10.0, Float.parseFloat(parts[4]), .00001);
+	}
+
+	@Test
+	public void shouldParseGroupUpdate () {
+		String groupTable = "2223 0 one 2224 0 two 2225 1 5.0 -25.345 2.5 2226 1 1.0 1.0 1.0";
+		AdvertisementPayload advPayload = new AdvertisementPayload();
+		advPayload.setMsgType(AdvertisementPayload.GROUP_UPDATE);
+		advPayload.setSrcID("2222");
+		advPayload.setMsg(groupTable.getBytes(StandardCharsets.UTF_8));
+		mGrpMgr.read(advPayload);
+
+		Group [] grps = mGrpMgr.getGroups();
+		int numFound = 0;
+
+		assertEquals(4, grps.length);
+
+		for (int i = 0; i < grps.length; i++) {
+			if (Group.NAMED_GROUP == grps[i].getType()) {
+				numFound++;
+			}
+			else if (Group.GEO_GROUP == grps[i].getType()) {
+				numFound++;
+			}
+		}
+
+		assertEquals(4, numFound);
+	}
+
+	@Test
+	public void shouldIgnoreMessageBecauseGroupNotKnown() {
+		String msg = "hello world!";
+		AdvertisementPayload advPayload = new AdvertisementPayload();
+		advPayload.setMsgType(AdvertisementPayload.REGULAR_MESSAGE);
+		advPayload.setSrcID("2222");
+		advPayload.setDestID("1110");
+		advPayload.setMsg(msg.getBytes(StandardCharsets.UTF_8));
+		mGrpMgr.read(advPayload);
+		assertEquals(advPayload, mAdvPayloads.get(0));
+		assertEquals("", mMessage);
+	}
+
+	@Test
+	public void shouldIgnoreMessageBecauseGroupNotJoined() {
+		mGrpMgr.query("addGroup blargity_blarg");
+
+		//Send a message to the group
+		String msg = "hello world!";
+		AdvertisementPayload advPayload = new AdvertisementPayload();
+		advPayload.setMsgType(AdvertisementPayload.REGULAR_MESSAGE);
+		advPayload.setSrcID("2222");
+		advPayload.setDestID("1110");
+		advPayload.setMsg(msg.getBytes(StandardCharsets.UTF_8));
+		mGrpMgr.read(advPayload);
+		assertEquals(advPayload, mAdvPayloads.get(0));
+		assertEquals("", mMessage);
+	}
+
+	@Test
+	public void shouldGetMessageBecauseGroupJoined() {
+		mGrpMgr.query("addGroup blargity_blarg");
+		mGrpMgr.query("joinGroup 1110");
+
+		//Send a message to the group
+		String msg = "hello world!";
+		AdvertisementPayload advPayload = new AdvertisementPayload();
+		advPayload.setMsgType(AdvertisementPayload.REGULAR_MESSAGE);
+		advPayload.setSrcID("2222");
+		advPayload.setDestID("1110");
+		advPayload.setMsg(msg.getBytes(StandardCharsets.UTF_8));
+		mGrpMgr.read(advPayload);
+		assertEquals(advPayload, mAdvPayloads.get(0));
+		assertEquals(msg, mMessage);
 	}
 }

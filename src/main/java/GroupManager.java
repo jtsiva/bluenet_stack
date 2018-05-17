@@ -37,14 +37,23 @@ public class GroupManager implements LayerIFace{
 
 
 		//we need to add the group table chksum to the location update
-		if (AdvertisementPayload.LOCATION_UPDATE == advPayload.getMsgType() && Objects.equals(mID, advPayload.getSrcID())) {
+		if (AdvertisementPayload.LOCATION_UPDATE == advPayload.getMsgType() && Objects.equals(mID, new String(advPayload.getSrcID()))) {
 			byte [] chksum = getChkSum();
 			byte [] msgBytes = advPayload.getMsg();
+
+			if (null == msgBytes) {
+				msgBytes = new byte [10];
+			} 
+			else if (10 > msgBytes.length) {
+				byte [] tmp = msgBytes.clone();
+				msgBytes = new byte [10];
+				System.arraycopy(tmp, 0, msgBytes, 0, tmp.length);
+			}
 
 			System.arraycopy(chksum, 0, msgBytes, 8, chksum.length);
 			advPayload.setMsg(msgBytes);
 		}
-		else if (AdvertisementPayload.LOCATION_UPDATE == advPayload.getMsgType() && !Objects.equals(mID, advPayload.getSrcID())) {
+		else if (AdvertisementPayload.LOCATION_UPDATE == advPayload.getMsgType() && !Objects.equals(mID, new String(advPayload.getSrcID()))) {
 			byte [] chksum = new byte [2];
 			//QUESTION: should we restrict group updates to 1 hop neighbors?
 			//there is a verification step that could result in many group 
@@ -81,7 +90,8 @@ public class GroupManager implements LayerIFace{
 			buffer.flip();
 			long time = buffer.getLong();
 		   
-		   	if (time > mLastUpdate.getTime()) {
+		   	//is our group table newer than theirs?
+		   	if (null != mLastUpdate && time < mLastUpdate.getTime()) {
 		   		//send group update message containing group table
 				AdvertisementPayload newAdv = new AdvertisementPayload();
 				newAdv.setSrcID(mID);
@@ -97,6 +107,7 @@ public class GroupManager implements LayerIFace{
 		else if (AdvertisementPayload.GROUP_UPDATE == advPayload.getMsgType()) {
 			//someone has responded to our group query with an update
 			//parse group table in message
+			//Bad table could be sent intentionally!!!
 			String groupTable = new String(advPayload.getMsg());
 			String [] parts = groupTable.split("\\s+");
 
@@ -225,7 +236,7 @@ public class GroupManager implements LayerIFace{
 		}
 		else if (Objects.equals(parts[0], "getGroups")) {
 			for (GroupEntry groupEntry: mGroups) {
-				resultString += groupEntry.mGroup.getID() + " " + String.valueOf(groupEntry.mGroup.getType()) + " ";
+				resultString += new String(groupEntry.mGroup.getID()) + " " + String.valueOf(groupEntry.mGroup.getType()) + " ";
 				
 				if (Group.NAMED_GROUP == groupEntry.mGroup.getType()) {
 					NamedGroup tmpGrp = (NamedGroup)groupEntry.mGroup;
