@@ -42,13 +42,13 @@ public class RoutingManager implements LayerIFace{
 
 		*/
 
-		final byte ME = 4; //hops
+		final byte ME = AdvertisementPayload.MAX_TTL; //hops
 		final float ME_D_THRESHOLD = 1.0f; //meters
-		final byte NEAR = 3;
+		final byte NEAR = ME - 1;
 		final float NEAR_D_THRESHOLD = 3.0f;
-		final byte MEDIUM = 2;
+		final byte MEDIUM = ME - 2;
 		final float MEDIUM_D_THRESHOLD = 7.0f;
-		final byte FAR = 1;
+		final byte FAR = ME - 3;
 		final float FAR_D_THRESHOLD = 13.0f;
 
 		String id = new String(advPayload.getSrcID());
@@ -83,9 +83,36 @@ public class RoutingManager implements LayerIFace{
 	public int read(AdvertisementPayload advPayload) {
 		int retVal = 0;
 
+		if (AdvertisementPayload.MAX_TTL - 1 == advPayload.getTTL()) { //1 hop neighbors
+			List<String> neighbors = mLocalNodes.get(mID);
+
+			if (null == neighbors) {
+				neighbors = new ArrayList<String>();
+			}
+			String newNeighbor = new String(advPayload.getSrcID());
+			if (!neighbors.contains(newNeighbor)) {
+				neighbors.add(newNeighbor);
+				mLocalNodes.put(mID, neighbors);
+			}
+		}
+		else if (AdvertisementPayload.MAX_TTL - 2 == advPayload.getTTL()) {//2 hop neighbors
+			if (null != advPayload.getOneHopNeighbor()) {
+				List<String> neighbors = mLocalNodes.get(new String(advPayload.getOneHopNeighbor()));
+
+				if (null == neighbors) {
+					neighbors = new ArrayList<String>();
+				}
+				String newNeighbor = new String(advPayload.getSrcID());
+				if (!neighbors.contains(newNeighbor)) {
+					neighbors.add(newNeighbor);
+					mLocalNodes.put(new String(advPayload.getOneHopNeighbor()), neighbors);
+				}
+			}
+		}
+
 		if (advPayload.getMsgType() == AdvertisementPayload.LOCATION_UPDATE && shouldPass(advPayload)) {
 			
-			if (!Objects.equals(mID, advPayload.getSrcID())) {
+			if (!Objects.equals(mID, new String(advPayload.getSrcID()))) {
 				advPayload.decTTL();
 			}
 
@@ -100,7 +127,7 @@ public class RoutingManager implements LayerIFace{
 				mReadCB.read(new String(advPayload.getSrcID()), advPayload.getMsg()); //get msg pulls the message
 			}
 			else { //not for us, so forward
-				if (advPayload.getTTL() > 0) {
+				if (advPayload.getTTL() >= 0) {
 					//check inDirection
 					//check traffic volume
 					//check neighbors' direction
@@ -110,22 +137,13 @@ public class RoutingManager implements LayerIFace{
 				}
 			}
 		}
-
-		if (AdvertisementPayload.MAX_TTL - 1 == advPayload.getTTL()) { //1 hop neighbors
-			List<String> neighbors = mLocalNodes.get(mID);
-
-			if (null == neighbors) {
-				neighbors = new ArrayList<String>();
-			}
-			String newNeighbor = new String(advPayload.getSrcID());
-			if (!neighbors.contains(newNeighbor)) {
-				neighbors.add(newNeighbor);
-				mLocalNodes.put(mID, neighbors);
+		else if (advPayload.getMsgType() == AdvertisementPayload.GROUP_QUERY 
+				|| advPayload.getMsgType() == AdvertisementPayload.GROUP_UPDATE) {
+			//Do not forward these message types! Only for 1-hop neighbors
+			if (advPayload.getTTL() == AdvertisementPayload.MAX_TTL) {
+				retVal = mWriteCB.write(advPayload);
 			}
 		}
-		// else if (AdvertisementPayload.MAX_TTL - 2 == advPayload.getTTL()) {//2 hop neighbors
-		// 	mLocalNodes.put(advPayload.getOneHopNeighbor(), advPayload.getSrcID());
-		// }
 
 
 		return retVal;
@@ -137,7 +155,7 @@ public class RoutingManager implements LayerIFace{
 		return mWriteCB.write(advPayload);
 	}
 	public int write(String dest, byte [] message) {
-		throw new java.lang.UnsupportedOperationException("Not supported.");
+		return mWriteCB.write(dest, message);
 	}
 	public String query(String myQuery) {
 		String resultString = new String();
