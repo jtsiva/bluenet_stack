@@ -1,6 +1,6 @@
 package nd.edu.bluenet_stack;
 
-
+import java.util.*;
 import java.nio.charset.StandardCharsets;
 
 public class Group {
@@ -43,7 +43,7 @@ public class Group {
         }
 
         Group other = (Group)obj;
-        if (!Objects.equals(mID, other.getID())) {
+        if (!Objects.equals(mID, new String(other.getID()))) {
             return false;
         }
 

@@ -11,6 +11,7 @@ public class GroupTest {
 	private final static String MY_ID = "1111";
 	private AdvertisementPayload mAdvPayload = null;
 	private GroupManager mGrpMgr;
+	private int id = 0;
 
 	@Before
 	public void setup() {
@@ -20,6 +21,10 @@ public class GroupTest {
 				String returnString = "";
 				if (Objects.equals(question, "global.id")) {
 					returnString = "1111";
+				}
+				else if (Objects.equals(question, "global.getNewID")) {
+					returnString = "111" + String.valueOf(id);
+					id += 2;
 				}
 
 				return returnString;
@@ -145,5 +150,62 @@ public class GroupTest {
 	@Test
 	public void shouldReturnTag() {
 		assertEquals("GrpMgr", mGrpMgr.query("tag"));
+	}
+
+	@Test
+	public void shouldGet0ChkSum() {
+		//System.out.println(mGrpMgr.getChkSum());
+		assertTrue(Arrays.equals(new byte[] {-1,-1}, mGrpMgr.getChkSum()));
+	}
+
+	@Test
+	public void shouldGetAddNamedGroupGetNon0ChkSum() {
+		mGrpMgr.query("addGroup blargity_blarg");
+		assertTrue(!(Arrays.equals(new byte[] {-1,-1},mGrpMgr.getChkSum())));
+	}
+
+	@Test
+	public void shouldGetEmptyListOfGroups() {
+		Group [] grps = mGrpMgr.getGroups();
+		assertTrue(0 == grps.length);
+	}
+
+	@Test
+	public void shouldAddandGetBothGroupTypes() {
+		mGrpMgr.query("addGroup blargity_blarg");
+		mGrpMgr.query("addGroup 10.0 10.0 30.0");
+		Group [] grps = mGrpMgr.getGroups();
+		int numFound = 0;
+
+		assertEquals(2, grps.length);
+
+		for (int i = 0; i < grps.length; i++) {
+			if (Group.NAMED_GROUP == grps[i].getType()) {
+				numFound++;
+			}
+			else if (Group.GEO_GROUP == grps[i].getType()) {
+				numFound++;
+			}
+		}
+
+		assertEquals(2, numFound);
+
+	}
+
+	@Test
+	public void shouldAddandJoinGroup() {
+		mGrpMgr.query("addGroup blargity_blarg");
+		Group [] grps = mGrpMgr.getGroups();
+
+		assertTrue(!grps[0].getStatus());
+		mGrpMgr.query("joinGroup 1110");
+		grps = mGrpMgr.getGroups();
+
+		assertTrue(grps[0].getStatus());
+	}
+
+	@Test
+	public void shouldSetChkSum() {
+		AdvertisementPayload advPayload = new AdvertisementPayload();
 	}
 }

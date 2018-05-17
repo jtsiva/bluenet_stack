@@ -45,13 +45,14 @@ public class GroupManager implements LayerIFace{
 			advPayload.setMsg(msgBytes);
 		}
 		else if (AdvertisementPayload.LOCATION_UPDATE == advPayload.getMsgType() && !Objects.equals(mID, advPayload.getSrcID())) {
-			byte [] chksum = byte [2];
+			byte [] chksum = new byte [2];
 			//QUESTION: should we restrict group updates to 1 hop neighbors?
 			//there is a verification step that could result in many group 
 			//queries from 2nd and even 3rd hop neighbors (likely handled by routing layer)
 
 			//check to see if the checksum matches ours
-			System.arraycopy(advPayload.getMsg(), 8, chksum, chksum.length);
+			byte [] msg = advPayload.getMsg();
+			System.arraycopy(msg, 8, chksum, 0, chksum.length);
 
 			//if it doesn't then we need to find out whether the sender has a more up to date
 			//list of groups
@@ -65,7 +66,7 @@ public class GroupManager implements LayerIFace{
 				if (null != mLastUpdate) {
 					lastUpdate = mLastUpdate.getTime();
 				}
-				newAdv.setMsg(ByteBuffer.allocate(8).putLong(lastUpdate).array())
+				newAdv.setMsg(ByteBuffer.allocate(8).putLong(lastUpdate).array());
 
 				mReadCB.read(newAdv);
 			}
@@ -75,7 +76,10 @@ public class GroupManager implements LayerIFace{
 			//check their timestamp against ours (assumes synchronized clocks!!!)
 
 			//from: https://stackoverflow.com/questions/4485128/how-do-i-convert-long-to-byte-and-back-in-java/29132118#29132118
-			long time = ByteBuffer.allocate(Long.BYTES).put(advPayload.getMsg()).flip().getLong();
+			ByteBuffer buffer = ByteBuffer.allocate(Long.BYTES);
+			buffer.put(advPayload.getMsg());
+			buffer.flip();
+			long time = buffer.getLong();
 		   
 		   	if (time > mLastUpdate.getTime()) {
 		   		//send group update message containing group table
@@ -84,7 +88,7 @@ public class GroupManager implements LayerIFace{
 				newAdv.setDestID(advPayload.getSrcID());
 				newAdv.setMsgType(AdvertisementPayload.GROUP_UPDATE);
 				String groupTable = query("getGroups");
-				newAdv.setMsg(groupTable.getBytes(StandardCharsets.UTF_8))
+				newAdv.setMsg(groupTable.getBytes(StandardCharsets.UTF_8));
 
 				mReadCB.read(newAdv);
 		   	}
@@ -100,21 +104,24 @@ public class GroupManager implements LayerIFace{
 				String id = parts[i];
 				int type = Integer.parseInt(parts[i+1]);
 				Group tmpGrp = new Group(id, type);
+				Group newGrp = null;
 
 				if (Group.NAMED_GROUP == type) {
-					NamedGroup newGrp = new NamedGroup(id, parts[i+2]);
+					newGrp = new NamedGroup(id, parts[i+2]);
 					i += 2;
 				}
 				else if (Group.GEO_GROUP == type) {
-					GeoGroup newGrp = new GeoGroup(id, Float.parseFloat(parts[i+2]),Float.parseFloat(parts[i+3]),Float.parseFloat(parts[i+4]));
+					newGrp = new GeoGroup(id, Float.parseFloat(parts[i+2]),Float.parseFloat(parts[i+3]),Float.parseFloat(parts[i+4]));
 					i += 4;
 				}
 
-				//if the group already exists in the table, do nothing since groups are immutable
-				if (!mGroups.contains(tmpGrp)) {
-					GroupEntry grpEntry = new GroupEntry(newGrp);
-					mLastUpdate = grpEntry.mTimestamp;
-					mGroups.add(grpEntry);
+				if (null != newGrp) {
+					//if the group already exists in the table, do nothing since groups are immutable
+					if (!mGroups.contains(tmpGrp)) {
+						GroupEntry grpEntry = new GroupEntry(newGrp);
+						mLastUpdate = grpEntry.mTimestamp;
+						mGroups.add(grpEntry);
+					}
 				}
 
 				
@@ -175,9 +182,9 @@ public class GroupManager implements LayerIFace{
 			float latitude = Float.parseFloat(parts[1]);
 			float longitude = Float.parseFloat(parts[2]);
 			
-			for (Group group: mGroups) {
-				if (Group.GEO_GROUP == group.getType()) {
-					GeoGroup tmpGrp = (GeoGroup)group;
+			for (GroupEntry groupEntry: mGroups) {
+				if (Group.GEO_GROUP == groupEntry.mGroup.getType()) {
+					GeoGroup tmpGrp = (GeoGroup)groupEntry.mGroup;
 					tmpGrp.join(latitude, longitude);
 				}
 			}
@@ -193,17 +200,19 @@ public class GroupManager implements LayerIFace{
 
 			boolean bueno = true;
 			String newID = mQueryCB.ask("global.getNewID");
+			Group grp = null;
+
 			if (2 == parts.length) {
-				NamedGroup grp = new NamedGroup(newID, parts[1]);
+				grp = new NamedGroup(newID, parts[1]);
 			}
 			else if (4 == parts.length) {
-				GeoGroup grp = new GeoGroup(newID, Float.parseFloat(parts[1]), Float.parseFloat(parts[2]), Float.parseFloat(parts[3]));
+				grp = new GeoGroup(newID, Float.parseFloat(parts[1]), Float.parseFloat(parts[2]), Float.parseFloat(parts[3]));
 			}
 			else {
 				bueno = false;
 			}
 
-			if (bueno) {
+			if (bueno && null != grp) {
 				GroupEntry grpEntry = new GroupEntry(grp);
 				mLastUpdate = grpEntry.mTimestamp;
 				mGroups.add(grpEntry);
@@ -216,13 +225,13 @@ public class GroupManager implements LayerIFace{
 		}
 		else if (Objects.equals(parts[0], "getGroups")) {
 			for (GroupEntry groupEntry: mGroups) {
-				resultString += groupEntry.mGroup.getID() + " " + new String(groupEntry.mGroup.getType()) + " ";
+				resultString += groupEntry.mGroup.getID() + " " + String.valueOf(groupEntry.mGroup.getType()) + " ";
 				
-				if (Group.NAMED_GROUP == group.getType()) {
+				if (Group.NAMED_GROUP == groupEntry.mGroup.getType()) {
 					NamedGroup tmpGrp = (NamedGroup)groupEntry.mGroup;
 					resultString += tmpGrp.getName() + " ";
 				}
-				else if (Group.GEO_GROUP == group.type()) {
+				else if (Group.GEO_GROUP == groupEntry.mGroup.getType()) {
 					GeoGroup tmpGrp = (GeoGroup)groupEntry.mGroup;
 					resultString += String.valueOf(tmpGrp.getLatitude()) + " " + String.valueOf(tmpGrp.getLongitude()) + " " + String.valueOf(tmpGrp.getRadius()) + " ";
 				}
@@ -230,10 +239,11 @@ public class GroupManager implements LayerIFace{
 				//don't need to append time stamp since no one needs to know that--for internal use only
 			}
 		}
-		else if (Objects.equals(parts[0], "joinGroups")) {
+		else if (Objects.equals(parts[0], "joinGroup")) {
 			resultString = "fail";
-			for (GroupEntry groupEntry.mGroup: mGroups) {
-				if (Objects.equals(parts[1], groupEntry.mGroup.getID())) {
+			for (GroupEntry groupEntry: mGroups) {
+				if (Objects.equals(parts[1], new String(groupEntry.mGroup.getID())) && Group.GEO_GROUP != groupEntry.mGroup.getType()) {
+					//the ID needs to be in the group table and we can't choose to join a geographic group
 					groupEntry.mGroup.join();
 					resultString = "ok";
 				}
@@ -253,7 +263,6 @@ public class GroupManager implements LayerIFace{
 			}
 
 			mGroups.removeAll(found);
-
 		}
 		else if (Objects.equals(parts[0], "getCheckSum")) {
 			resultString = new String(getChkSum());
@@ -262,15 +271,24 @@ public class GroupManager implements LayerIFace{
 		return resultString;
 	}
 
-	private byte[] getChkSum () {
+	public Group[] getGroups() {
+		Group [] grpList = new Group[mGroups.size()];
+		for (int i = 0; i < grpList.length; i++) {
+			grpList[i] = mGroups.get(i).mGroup;
+		}
+
+		return grpList;
+	}
+
+	public byte[] getChkSum () {
 		byte[] buf = new byte[mGroups.size() * 4];
 		byte[] chksum = {0b0, 0b0};
 		//make one byte array of all IDs and compute
 
 		//set up the buffer as an array of group ids
 		int index = 0;
-		for (Group group: mGroups) {
-			byte[] id = group.getID();
+		for (GroupEntry groupEntry: mGroups) {
+			byte[] id = groupEntry.mGroup.getID();
 			System.arraycopy(id, 0, buf,index,id.length);
 			index += id.length;
 		}
@@ -303,7 +321,9 @@ public class GroupManager implements LayerIFace{
 	    sum = sum & 0xFFFF;
 
 	    chksum[0] = (byte)((sum & 0xFF00) >>> 8);
+	    //System.out.println(chksum[0]);
 	    chksum[1] = (byte)(sum & 0x00FF);
+	    //System.out.println(chksum[1]);
 
 		return chksum;
 	}

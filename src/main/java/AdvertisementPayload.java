@@ -119,12 +119,20 @@ public class AdvertisementPayload {
         this.srcID = srcID.getBytes(StandardCharsets.UTF_8);
     }
 
+    public void setSrcID(byte [] srcID){
+        this.srcID = srcID.clone();
+    }
+
     public byte[] getSrcID() {
         return srcID;
     }
 
     public void setDestID(String destID){
         this.destID = destID.getBytes(StandardCharsets.UTF_8);
+    }
+
+    public void setDestID(byte [] destID){
+        this.destID = destID.clone();
     }
 
     public byte[] getDestID() {
