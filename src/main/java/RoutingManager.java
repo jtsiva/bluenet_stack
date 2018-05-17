@@ -120,14 +120,14 @@ public class RoutingManager implements LayerIFace{
 		}
 		else if (advPayload.getMsgType() == AdvertisementPayload.SMALL_MESSAGE 
 				|| advPayload.getMsgType() == AdvertisementPayload.REGULAR_MESSAGE) {
-			advPayload.decTTL();
-
+			
 			if (Objects.equals(mID, new String(advPayload.getDestID()))) {
 				// message is for us so we pass up 
 				mReadCB.read(new String(advPayload.getSrcID()), advPayload.getMsg()); //get msg pulls the message
 			}
 			else { //not for us, so forward
-				if (advPayload.getTTL() >= 0) {
+				if (advPayload.getTTL() > 0) {
+					advPayload.decTTL();
 					//check inDirection
 					//check traffic volume
 					//check neighbors' direction
@@ -141,6 +141,7 @@ public class RoutingManager implements LayerIFace{
 				|| advPayload.getMsgType() == AdvertisementPayload.GROUP_UPDATE) {
 			//Do not forward these message types! Only for 1-hop neighbors
 			if (advPayload.getTTL() == AdvertisementPayload.MAX_TTL) {
+				advPayload.decTTL();
 				retVal = mWriteCB.write(advPayload);
 			}
 		}
