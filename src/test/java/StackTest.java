@@ -40,7 +40,7 @@ public class StackTest { //Using protocol container?
 		assertEquals(stack.getMyID(), mID);
 	}
 
-	@Ignore//@Test
+	@Test
 	public void shouldWriteLongMessage() {
 		String msg = "This is a little bit longer message with a more text and stuff. I'll even add in some punctuation!";
 		stack.write(stack.getMyID(), msg);
