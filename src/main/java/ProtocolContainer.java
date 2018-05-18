@@ -1,14 +1,17 @@
 package nd.edu.bluenet_stack;
 
 import java.util.*;
+import java.nio.charset.StandardCharsets;
 
 public class ProtocolContainer implements BlueNetIFace {
 	private Result mResultHandler = null;
 
 	private ArrayList<LayerIFace> mLayers = new ArrayList<>(); 
 	
-	private MessageLayer mMsg = new MessageLayer();
+	private RoutingManager mRoute = new RoutingManager();
+	private GroupManager mGrp = new GroupManager();
 	private LocationManager mLoc = new LocationManager();
+	private MessageLayer mMsg = new MessageLayer();
 	private DummyBLE mBLE = new DummyBLE();
 
 	private Query mQuery;
@@ -19,8 +22,11 @@ public class ProtocolContainer implements BlueNetIFace {
 		//makes life easier to add all layers to an arraylist
 		//order matters here. it is assumed that the topmost layer (first added)
 		//will implement a write that takes Messages and a read that provides Messages
-		mLayers.add(mMsg);
+		
+		mLayers.add(mRoute);
+		mLayers.add(mGrp);
 		mLayers.add(mLoc);
+		mLayers.add(mMsg);
 		mLayers.add(mBLE);
 
 		mID = mRandString.nextString();
@@ -53,6 +59,9 @@ public class ProtocolContainer implements BlueNetIFace {
 					}
 					else if (Objects.equals("reset id", parts[QUERY])) { //id collision detected so regen
 						mID = mRandString.nextString();
+					}
+					else if (Objects.equals("getNewID", parts[QUERY])) {
+						resultString = mRandString.nextString();
 					}
 					else if (parts[QUERY].contains("setLocation")) { //maybe all other global queries are passed to everyone?
 						for (LayerIFace layer: mLayers) {
@@ -95,14 +104,14 @@ public class ProtocolContainer implements BlueNetIFace {
 			}
 		});
 
-		//The message layer writes Messages or AdvertisementPayloads to the 
+		//The message layer writes AdvertisementPayloads to the 
 		//dummy ble layer
 		mMsg.setWriteCB(new Writer() {
 			public int write(AdvertisementPayload advPayload) {
 				return mBLE.write(advPayload);
 			}
 			public int write(String dest, byte[] message) {
-				return mBLE.write(dest, message);
+				return -1;
 			}
 		});
 
@@ -112,10 +121,7 @@ public class ProtocolContainer implements BlueNetIFace {
 		mMsg.setReadCB(new Reader() {
 			public int read(String src, byte[] message) {
 				
-			    if (mResultHandler != null) {
-			    	mResultHandler.provide(src, message);
-			    }
-
+			    
 				return 0;
 			}
 
@@ -124,16 +130,53 @@ public class ProtocolContainer implements BlueNetIFace {
 			}
 		});
 
-		//The location manager writes (mostly) complete AdvertisementPayloads to the
-		//message layer to complete and send
-		mLoc.setWriteCB(new Writer() {
+		//The location manager passes messages up the stack to the group manager
+		mLoc.setReadCB(new Reader() {
+			public int read(AdvertisementPayload advPayload) {
+				return mGrp.read(advPayload);
+			}
+			public int read(String src, byte[] message) {
+				return -1;
+			}
+		});
+
+		//group manager hands to routing manager or all the way to 
+		mGrp.setReadCB(new Reader() {
+			public int read(AdvertisementPayload advPayload) {
+				return mRoute.read(advPayload);
+			}
+			public int read(String src, byte[] message) {
+				if (mResultHandler != null) {
+			    	mResultHandler.provide(src, message);
+			    }
+				return 0;
+			}
+		});
+
+		//routing manager can only hand 'up' to result handler
+		mRoute.setReadCB(new Reader() {
+			public int read(AdvertisementPayload advPayload) {
+				return -1;
+			}
+			public int read(String src, byte[] message) {
+				if (mResultHandler != null) {
+			    	mResultHandler.provide(src, message);
+			    }
+				return 0;
+			}
+		});
+
+		//pass writes down to the message layer
+		mRoute.setWriteCB(new Writer() {
 			public int write(AdvertisementPayload advPayload) {
 				return mMsg.write(advPayload);
 			}
 			public int write(String dest, byte[] message) {
-				return -1;
+				return mMsg.write(dest, message);
 			}
 		});
+
+
 	}
 
 	//***********************************
@@ -145,7 +188,7 @@ public class ProtocolContainer implements BlueNetIFace {
 	}
 	public int write(String destID, String input) {
 
-		int result = mLayers.get(0).write(destID, input.getBytes());
+		int result = mLayers.get(0).write(destID, input.getBytes(StandardCharsets.UTF_8));
 
 		if (0 == result) {
 			result = input.length();
@@ -169,40 +212,28 @@ public class ProtocolContainer implements BlueNetIFace {
 	}
 
 	public Group [] getGroups()	{
-
-		String res = mQuery.ask("GrpMgr.getGroups");
-		String[] groupInfo = res.split(",");
-		Group[] groups = new Group[groupInfo.length];
-		int index = 0;
-
-		for (String group: groupInfo) {
-			String[] parts = group.split("\\s+");
-			groups[index] = new NamedGroup(parts[0],parts[1]);
-			index++;
-		}
-		
-
-		return groups;
+		return mGrp.getGroups();
 	}
 
 	public void addGroup(String name) {
-
+		mQuery.ask("GrpMgr.addGroup " + name);
 	}
 
 	public void addGroup(float lat, float lon, float rad) {
-
+		mQuery.ask("GrpMgr.addGroup " + String.valueOf(lat) + " " + String.valueOf(lon) + " " + String.valueOf(rad));
 	}
 	public boolean joinGroup(String id) {
-		return false;
+		String res = mQuery.ask("GrpMgr.joinGroup " + id);
+		return Objects.equals("ok", res);
 	}
 
 	public boolean leaveGroup(String id) {
-		return false;
+		String res = mQuery.ask("GrpMgr.leaveGroup " + id);
+		return Objects.equals("ok", res);
 	}
 
 	//************************************************
 	//Other functions that need to taken care of here:
-	//--periodically broadcast location updates
 	//--periodically updating this devices location
 	//************************************************
 
@@ -211,11 +242,8 @@ public class ProtocolContainer implements BlueNetIFace {
 		double lat = 0.0;
 		double lon = 0.0;
 
-		String res = mQuery.ask("LocMgr.setLocation " + String.valueOf(lat) + " " + String.valueOf(lon));
+		String res = mQuery.ask("global.setLocation " + String.valueOf(lat) + " " + String.valueOf(lon));
 	}
 
-	private void sendUpdate() {
-		String res = mQuery.ask ("LocMgr.sendLocation");
-	}
-
+	
 }

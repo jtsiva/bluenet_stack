@@ -3,7 +3,7 @@ package nd.edu.bluenet_stack;
 import java.util.*;
 
 public class MessageLayer implements LayerIFace {
-	private final static int SMALL_MSG_MAX = 10;
+	private final static int SMALL_MSG_MAX = 9;
 	protected Reader mReadCB;
 	protected Writer mWriteCB;
 	protected Query mQueryCB;

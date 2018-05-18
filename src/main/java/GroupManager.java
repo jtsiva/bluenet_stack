@@ -260,6 +260,16 @@ public class GroupManager implements LayerIFace{
 				}
 			}
 		}
+		else if (Objects.equals(parts[0], "leaveGroup")) {
+			resultString = "fail";
+			for (GroupEntry groupEntry: mGroups) {
+				if (Objects.equals(parts[1], new String(groupEntry.mGroup.getID())) && Group.GEO_GROUP != groupEntry.mGroup.getType()) {
+					//the ID needs to be in the group table and we can't choose to join a geographic group
+					groupEntry.mGroup.leave();
+					resultString = "ok";
+				}
+			}
+		}
 		else if (Objects.equals(parts[0], "cleanupGroups")) {
 			//remove group if we haven't used it in a while
 

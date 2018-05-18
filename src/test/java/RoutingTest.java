@@ -124,7 +124,7 @@ public class RoutingTest {
 		mRouteMgr.read(advPayload);
 
 		assertEquals(mAdvPayload, advPayload);
-		assertEquals(2, mAdvPayload.getTTL());
+		assertEquals(6, mAdvPayload.getTTL());
 		assertEquals(mMessage, null);
 		assertEquals(mID, null);
 

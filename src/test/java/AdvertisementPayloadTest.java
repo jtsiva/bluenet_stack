@@ -61,7 +61,7 @@ public class AdvertisementPayloadTest {
 	@Test
 	public void shouldParsePushedByteString() {
 		//CCCC, DDDD, 1, ttl=2, hp=1, len=8, hello!!!
-		byte [] data = new byte[] {(byte)0x43,(byte)0x43,(byte)0x43,(byte)0x43,(byte)0x44,(byte)0x44,(byte)0x44,(byte)0x44,(byte)0x01,(byte)0xA8,(byte)0x68,(byte)0x65,(byte)0x6C,(byte)0x6C,(byte)0x6F,(byte)0x21,(byte)0x21,(byte)0x21};
+		byte [] data = new byte[] {(byte)0x43,(byte)0x43,(byte)0x43,(byte)0x43,(byte)0x44,(byte)0x44,(byte)0x44,(byte)0x44,(byte)0x01,(byte)0x50, (byte)0x08,(byte)0x68,(byte)0x65,(byte)0x6C,(byte)0x6C,(byte)0x6F,(byte)0x21,(byte)0x21,(byte)0x21};
 	
 		AdvertisementPayload adv = new AdvertisementPayload();
 		adv.fromBytes(data);
@@ -77,7 +77,7 @@ public class AdvertisementPayloadTest {
 	@Test
 	public void shouldParsePulledByteString() {
 		//CCCC, DDDD, 1, ttl=2, hp=1, len=8
-		byte [] data = new byte[] {(byte)0x43,(byte)0x43,(byte)0x43,(byte)0x43,(byte)0x44,(byte)0x44,(byte)0x44,(byte)0x44,(byte)0x01,(byte)0xA8};
+		byte [] data = new byte[] {(byte)0x43,(byte)0x43,(byte)0x43,(byte)0x43,(byte)0x44,(byte)0x44,(byte)0x44,(byte)0x44,(byte)0x01,(byte)0x50, (byte)0x08};
 	
 		// hello!!!
 		byte [] msg = new byte[] {(byte)0x68,(byte)0x65,(byte)0x6C,(byte)0x6C,(byte)0x6F,(byte)0x21,(byte)0x21,(byte)0x21};
@@ -99,6 +99,41 @@ public class AdvertisementPayloadTest {
 	}
 
 	@Test
+	public void shouldGetBytesAndParseAgain() {
+		//CCCC, DDDD, 1, ttl=2, hp=1, len=8, hello!!!	
+		AdvertisementPayload advPayload = new AdvertisementPayload();
+		advPayload.setSrcID("CCCC");
+		advPayload.setDestID("DDDD");
+		advPayload.setMsgID((byte)1);
+		advPayload.decTTL();
+		advPayload.setHighPriority(true);
+		String msg = "hello! this a little bit longer message!";
+		advPayload.setMsg(msg.getBytes(StandardCharsets.UTF_8));
+
+		//System.out.println(String.valueOf(advPayload.getMsgLength()));
+
+		AdvertisementPayload payload = new AdvertisementPayload();
+		byte[] tmpA = advPayload.getHeader();
+		byte[] tmpB = advPayload.getMsg();
+		//System.out.println(String.valueOf(tmpA[10]));
+
+		byte[] all = new byte[tmpA.length + tmpB.length];
+		System.arraycopy(tmpA, 0, all, 0, tmpA.length);
+		System.arraycopy(tmpB, 0, all, tmpA.length, tmpB.length);
+
+		payload.fromBytes(all);
+
+		//System.out.println(String.valueOf(payload.getMsgLength()));
+
+		assertEquals("CCCC", new String(payload.getSrcID()));
+		assertEquals("DDDD", new String(payload.getDestID()));
+		assertEquals(1, payload.getMsgID());
+		assertEquals(6, payload.getTTL());
+		assertTrue(payload.isHighPriority());
+		assertEquals(msg, new String(payload.getMsg()));
+	}
+
+	@Test
 	public void shouldGetHeaderBytes() {
 		AdvertisementPayload adv = new AdvertisementPayload();
 		String src = "AAAA";
@@ -116,7 +151,7 @@ public class AdvertisementPayloadTest {
 		assertTrue(Arrays.equals(dest.getBytes(StandardCharsets.UTF_8), Arrays.copyOfRange(header, 4, 8)));
 		assertEquals(1, header[8]);
 		assertTrue(adv.isHighPriority());
-		assertEquals(8, adv.getMsgLength());
+		assertEquals(header[10], adv.getMsgLength());
 	}
 
 	@Test
@@ -138,7 +173,7 @@ public class AdvertisementPayloadTest {
 		AdvertisementPayload adv = new AdvertisementPayload();
 		adv.decTTL();
 
-		assertEquals(2, adv.getTTL());
+		assertEquals(6, adv.getTTL());
 	}
 
 	@Test

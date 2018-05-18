@@ -17,7 +17,10 @@ public class AdvertisementPayload {
     public final static int GROUP_QUERY = 0x186C;
     //public final static byte GROUP_REGISTER = 0x186D;
 
-    public final static byte MAX_TTL = 0b11;
+    public final static byte MAX_TTL = 0b111;
+
+    // srcID || destID || msgID || ttl | hp | unused || len || msg 
+    // 4B       4B        1B       3b    1b   4b        1B     9B
 
     private byte[] srcID = null;
     private byte[] destID = null;
@@ -25,6 +28,7 @@ public class AdvertisementPayload {
     private int msgType = 0;
     private byte ttl = MAX_TTL;
     private byte hp = 0b0;
+    private byte unassigned = 0b0;
     private byte len = 0b0;
     private byte[] msg = null; //only used if msg type is small
     private byte[] oneHopNeighbor = null;
@@ -70,12 +74,14 @@ public class AdvertisementPayload {
         this.destID = destID;
         this.msgID = msgID[0]; //single bytes
 
-        this.ttl = (byte)((header & 0b11000000) >>> 6);
-        this.hp = (byte)((header & 0b00100000) >>> 5);
-        this.len = (byte)(header & 0b00011111);
+        this.ttl = (byte)((header & 0b11100000) >>> 5);
+        this.hp = (byte)((header & 0b00010000) >>> 4);
+        this.unassigned = (byte)(header & 0b00001111);
 
-        if (10 < bytes.length) { //message was pushed
-            this.msg = Arrays.copyOfRange(bytes, 10, 10+len);
+        this.len = Arrays.copyOfRange(bytes, 10, 11)[0];
+
+        if (11 < bytes.length) { //message was pushed
+            this.msg = Arrays.copyOfRange(bytes, 11, 11 + this.len);
         }
         else {
             needRetriever = true; //we're going to pull the data when we need it
@@ -88,17 +94,17 @@ public class AdvertisementPayload {
     }
 
     public byte[] getHeader(){
-        byte [] bytes = new byte[10];
+        byte [] bytes = new byte[11];
         System.arraycopy(srcID, 0, bytes,0,srcID.length);
         System.arraycopy(destID, 0, bytes,srcID.length,destID.length);
         bytes[8] = msgID;
 
         byte header = 0b0;
-        header = (byte)(header | (this.ttl << 6));
-        header = (byte)(header | (this.hp << 5));
-        header = (byte)(header | this.len);
-
+       
+        header = (byte)((this.ttl << 5) | (this.hp << 4) | (int)this.unassigned);
+        
         bytes[9] = header;
+        bytes[10] = this.len;
         return bytes;
     }
 
