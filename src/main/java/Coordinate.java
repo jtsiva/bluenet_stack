@@ -10,7 +10,7 @@ public class Coordinate {
 	public float mLongitude;
 
 	/**
-	 * @return Coordinate object with latitude and longitude initialized to (0.0,0.0)
+	 * Initialize latitude and longitude to (0.0,0.0)
 	 */
 	public Coordinate() {
 		mLatitude = 0.0f;
@@ -18,9 +18,10 @@ public class Coordinate {
 	}
 
 	/**
+	 * initialize coordinate to given latitude and longitude
+	 * 
 	 * @param lat latitude to set
 	 * @param lon longitude to set
-	 * @return Coordinate object with latitude and longitude initialized to passed in values
 	 */
 	public Coordinate(float lat, float lon) {
 		mLatitude = lat;
