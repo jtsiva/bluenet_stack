@@ -8,6 +8,9 @@ import java.util.*;
  * 
  * @author Josh Siva
  * @see LayerIFace
+ * @see Reader
+ * @see Writer
+ * @see Query
  */
 public class DummyBLE implements LayerIFace{
 	protected Reader mReadCB;

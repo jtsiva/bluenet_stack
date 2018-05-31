@@ -5,6 +5,23 @@ import java.nio.ByteBuffer;
 import java.util.*;
 import java.nio.charset.StandardCharsets;
 
+/**
+ * This class is responsible for handling all AdvertisementPayload messages
+ * that have something to do with a group. Groups are kept up-to-date between
+ * nodes by checking whether another node's list of groups is newer than our
+ * own. If it is then we request that they send us their table and we update
+ * ours accordingly.
+ *
+ * <p>Assume that this class sits above the LocationManager.
+ *
+ * @author Josh Siva
+ * @see LayerIFace
+ * @see Reader
+ * @see Writer
+ * @see Query
+ * @see GroupEntry
+ * @see AdvertisementPayload
+ */
 public class GroupManager implements LayerIFace{
 	public long deleteThreshold = 30000L;//30 seconds (DEBUG)  //1800000L; //30 minutes
 	protected Reader mReadCB;
@@ -27,14 +44,35 @@ public class GroupManager implements LayerIFace{
 		mID = mQueryCB.ask("global.id");
 	}
 
+	/**
+	 * Handles the group table propagation/update protocol and determines
+	 * whether a message intended for a group can be routed to us. Always
+	 * passes the AdvertisementPayload up to the next layer.
+	 *
+	 * <p>If we receive a location update from our LocationManager we need to
+	 * add the checksum for our group table to the end of the message.
+	 *
+	 * <p>If we receive a location update from another node we need to check
+	 * the checksum on that message against ours to determine whether there
+	 * is a mismatch (meaning we have different group tables). In the case of
+	 * a mismatch, we send a query to source of the location update with the
+	 * latest timestamp for our group table.
+	 *
+	 * <p>If we receive a query from another node with a timestamp that is
+	 * older than ours then we send our group table as an update. Otherwise,
+	 * we ignore the message.
+	 *
+	 * <p>If we receive a group table update then we parse the message, add
+	 * any groups that we are missing, and update our table timestamp.
+	 *
+	 * <p>If we receive a message then we check to see if the destination ID
+	 * is for a group that we have joined. If it is, then we can pass the
+	 * message up and update the timestamp for that particular group.
+	 * 
+	 * @param advPayload the payload to evaluate
+	 * @return the result of passing the payload up the stack
+	 */
 	public int read(AdvertisementPayload advPayload) {
-
-		//handle things: 
-		//	- update available groups
-		//	- check if we are in the group or the recipient to which the message is addressed
-		//	- pass message that require additional handling as AdvertisementPayloads--\
-		//	- pass message relevant to this device as srcID and String-----------------Not mutually exclusive
-
 
 		//we need to add the group table chksum to the location update
 		if (AdvertisementPayload.LOCATION_UPDATE == advPayload.getMsgType() && Objects.equals(mID, new String(advPayload.getSrcID()))) {
@@ -161,23 +199,51 @@ public class GroupManager implements LayerIFace{
 		}
 
 		// but more handling may still be required (such as forwarding)
-		mReadCB.read(advPayload);
 		
-
-		return 0;
+		return mReadCB.read(advPayload);
 
 	}
+
+	/**
+	 * @param src
+	 * @param message
+	 * @throws UnsupportedOperationException
+	 */
 	public int read(String src, byte[] message) {
 		throw new java.lang.UnsupportedOperationException("Not supported.");
 	}
+
+	/**
+	 * @param advPayload
+	 * @throws UnsupportedOperationException
+	 */
 	public int write(AdvertisementPayload advPayload) {
 		//Used for group creation?
 		throw new java.lang.UnsupportedOperationException("Not supported.");
 	}
+
+	/**
+	 * @param dest
+	 * @param message
+	 * @throws UnsupportedOperationException
+	 */
 	public int write(String dest, byte[] message) {
 		//Used for group creation?
 		throw new java.lang.UnsupportedOperationException("Not supported.");
 	}
+
+	/**
+	 * Respond to query strings. Handles:
+	 *  <p>- checking whether we can join geographical group given a location update
+	 *  <p>- adding a group
+	 *  <p>- returning a list of groups
+	 *  <p>- joining/leaving groups
+	 *  <p>- cleaning up group table based on age of GroupEntry
+	 * 
+	 * @param myQuery the query
+	 * @return response if query understood/handled, empty String otherwise
+	 * @see GroupEntry
+	 */
 	public String query(String myQuery) {
 		String resultString = new String();
 
@@ -292,6 +358,9 @@ public class GroupManager implements LayerIFace{
 		return resultString;
 	}
 
+	/**
+	 * @return array of groups that we know of
+	 */
 	public Group[] getGroups() {
 		Group [] grpList = new Group[mGroups.size()];
 		for (int i = 0; i < grpList.length; i++) {
@@ -301,6 +370,9 @@ public class GroupManager implements LayerIFace{
 		return grpList;
 	}
 
+	/**
+	 * @return 16-bit chksum as length 2 byte array
+	 */
 	public byte[] getChkSum () {
 		byte[] buf = new byte[mGroups.size() * 4];
 		byte[] chksum = {0b0, 0b0};
