@@ -3,6 +3,14 @@ package nd.edu.bluenet_stack;
 import java.util.*;
 import java.sql.Timestamp;
 
+/**
+ * The layer of the stack makes all forwarding decisions. Messages generated
+ * at lower layers of the network stack should all send their payload up to
+ * here to make the decision about how to send the packet.
+ * 
+ * @author Josh Siva
+ * @see LayerIFace
+ */
 public class RoutingManager implements LayerIFace{
 	protected Reader mReadCB;
 	protected Writer mWriteCB;
@@ -25,11 +33,34 @@ public class RoutingManager implements LayerIFace{
 		mID = mQueryCB.ask("global.id");
 	}
 
-
+	/**
+	 * Convenience function for applying a time-derived error model to a
+	 * measurement of the spread of recent location updates from a node.
+	 *
+	 * <p>No error model applied at this time.
+	 * 
+	 * @param d the spread of recent location updates
+	 * @param lastForward timestamp for the last time we forwarded the location
+	 * 		  update for the node
+	 * @return spread of recent location updates adjusted for any time-derived
+	 * 		   errors
+	 */
 	private float applyError(float d, Timestamp lastForward) {
 		return d; //no time-derived error applied
 	}
 
+	/**
+	 * Implement policy to determine whether the location update from
+     * the given ID should be forwarded. We do not want a broadcast
+	 * storm of location updates. 
+	 * 
+	 * <p>The general idea is that the further we are from the source
+	 * of the location update, the less inclined we will be to forward
+	 * the update
+	 * 
+	 * @param advPayload the payload to evaluate
+	 * @return true if we should forward the payload, false otherwise
+	 */
 	private boolean shouldPass(AdvertisementPayload advPayload) {
 		/*
 			Implement policy to determine whether the location update from
@@ -80,6 +111,24 @@ public class RoutingManager implements LayerIFace{
 		return result;
 	}
 
+	/**
+	 * This function handles all of the forwarding decisions and captures
+	 * local topology (out to 2 hop neighbors) to aid in making those 
+	 * decisions. Forwarding decisions are determined by message type:
+	 *
+	 * <p>Location updates are forwarded based on the somewhat more complicated
+	 * policy found in {@code shouldPass()}.
+	 *
+	 * <p>Group queries and updates are only sent to one-hop neighbors
+	 *
+	 * <p>Messages intended for this node are passed up the stack. Messages can
+	 * be forwarded based on a number of criteria, but for now are simply
+	 * rebroadcast.
+	 * 
+	 * @param advPayload the payload to evaluate
+	 * @return 0 if successful, negative otherwise
+	 * @see AdvertisementPayload
+	 */
 	public int read(AdvertisementPayload advPayload) {
 		int retVal = 0;
 
@@ -149,15 +198,39 @@ public class RoutingManager implements LayerIFace{
 
 		return retVal;
 	}
+
+	/**
+	 * @param src
+	 * @param message
+	 * @throws UnsupportedOperationException
+	 */
 	public int read(String src, byte [] message) {
 		throw new java.lang.UnsupportedOperationException("Not supported.");
 	}
+
+	/**
+	 * @param advPayload
+	 * @throws UnsupportedOperationException
+	 */
 	public int write(AdvertisementPayload advPayload) {
 		return mWriteCB.write(advPayload);
 	}
+
+	/**
+	 * @param dest
+	 * @param message
+	 * @throws UnsupportedOperationException
+	 */
 	public int write(String dest, byte [] message) {
 		return mWriteCB.write(dest, message);
 	}
+
+	/**
+	 * Handles queries. Right now only responds to ID request
+	 * 
+	 * @param myQuery question posed to layer
+	 * @return response or empty String if not handled
+	 */
 	public String query(String myQuery) {
 		String resultString = new String();
 

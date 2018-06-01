@@ -5,8 +5,12 @@ import java.util.Locale;
 import java.util.Objects;
 import java.util.Random;
 
-//From: https://stackoverflow.com/questions/41107/how-to-generate-a-random-alpha-numeric-string?page=1&tab=oldest#tab-top
-
+/**
+ * This class is used to generate random alphanumeric strings that are used for
+ * BlueNet IDs.
+ *
+ * <p>Implementation from <a href="https://stackoverflow.com/questions/41107/how-to-generate-a-random-alpha-numeric-string?page=1&tab=oldest#tab-top">stackoverflow</a>
+ */
 public class RandomString {
 
     /**
