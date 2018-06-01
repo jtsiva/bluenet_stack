@@ -307,7 +307,7 @@ public class LocationManager implements LayerIFace {
 	 * <p>-check if we're in the direction of the destination
 	 * <p>-get location of a node
 	 * <p>-get the position spread of a node
-	 * <p>-set our location
+	 * <p>-set our location (and send location update)
 	 * <p>-get a list of neighbor IDs
 	 * 
 	 * @param myQuery the query string

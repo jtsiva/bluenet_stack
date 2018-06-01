@@ -3,6 +3,21 @@ package nd.edu.bluenet_stack;
 import java.util.*;
 import java.nio.charset.StandardCharsets;
 
+/**
+ * This class is intended to demonstrate how to implement the BlueNetIFace
+ * and manage all the layers of the BlueNet stack.
+ *
+ * 
+ * @author Josh Siva
+ * @see BlueNetIFace
+ * @see Result
+ * @see RoutingManager
+ * @see GroupManager
+ * @see LocationManager
+ * @see MessageLayer
+ * @see DummyBLE
+ * @see RandomString
+ */
 public class ProtocolContainer implements BlueNetIFace {
 	private Result mResultHandler = null;
 
@@ -18,11 +33,21 @@ public class ProtocolContainer implements BlueNetIFace {
 	private RandomString mRandString = new RandomString(4);
 	private String mID;
 
+	/**
+	 * Initialize the ProtocolContainer by add all of the layers to an 
+	 * arraylist for easier management. The order in which they are added
+	 * is important here because we can use it to distinguish the top of the
+	 * stack (the part that will return answers to the application and
+	 * handle writes from the application).
+	 *
+	 * <p>Also sets up the query object which is used to handle and direct
+	 * queries from network layers to the appropriate layer.
+	 *
+	 * <p>Assign an alphanumeric BlueNet ID to this device and connect the
+	 * layers
+	 * 
+	 */
 	public ProtocolContainer () {
-		//makes life easier to add all layers to an arraylist
-		//order matters here. it is assumed that the topmost layer (first added)
-		//will implement a write that takes Messages and a read that provides Messages
-		
 		mLayers.add(mRoute);
 		mLayers.add(mGrp);
 		mLayers.add(mLoc);
@@ -183,9 +208,11 @@ public class ProtocolContainer implements BlueNetIFace {
 	//Interface things to implement
 	//***********************************
 
+
 	public String getMyID() {
 		return mID;
 	}
+
 	public int write(String destID, String input) {
 
 		int result = mLayers.get(0).write(destID, input.getBytes(StandardCharsets.UTF_8));
@@ -207,6 +234,7 @@ public class ProtocolContainer implements BlueNetIFace {
 
 		return ids;
 	}
+
 	public String getLocation(String id) {
 		return mQuery.ask("LocMgr.getLocation " + id);
 	}
@@ -222,6 +250,7 @@ public class ProtocolContainer implements BlueNetIFace {
 	public void addGroup(float lat, float lon, float rad) {
 		mQuery.ask("GrpMgr.addGroup " + String.valueOf(lat) + " " + String.valueOf(lon) + " " + String.valueOf(rad));
 	}
+
 	public boolean joinGroup(String id) {
 		String res = mQuery.ask("GrpMgr.joinGroup " + id);
 		return Objects.equals("ok", res);
