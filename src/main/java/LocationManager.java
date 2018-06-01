@@ -5,6 +5,19 @@ import java.nio.ByteBuffer;
 import java.sql.Timestamp;
 import static java.lang.Math.sqrt;
 
+/**
+ * This class is responsible for handling location information including
+ * sending location updates, managing recent locations for all discovered nodes,
+ * determining location spread of a given node, and determining the distance
+ * between two nodes.
+ * 
+ * @author Josh Siva
+ * @see LayerIFace
+ * @see LocationEntry
+ * @see Reader
+ * @see Writer
+ * @see Query
+ */
 public class LocationManager implements LayerIFace {
 	protected HashMap<String, LocationEntry> mIDLocationTable = null;
 	protected Reader mReadCB;
@@ -13,6 +26,9 @@ public class LocationManager implements LayerIFace {
 
 	private String mID;
 
+	/**
+	 * Default constructor
+	 */
 	public LocationManager() {
 		mIDLocationTable = new HashMap<String, LocationEntry>();
 		mReadCB = null;
@@ -20,7 +36,11 @@ public class LocationManager implements LayerIFace {
 		mQueryCB = null;
 	}
 
-	// https://stackoverflow.com/questions/14308746/how-to-convert-from-a-float-to-4-bytes-in-java
+	/**
+	 * Send a location update packet containing the latitude and longitude as floats
+	 * 
+	 * https://stackoverflow.com/questions/14308746/how-to-convert-from-a-float-to-4-bytes-in-java
+	 */
 	private void sendLocation() {
 
 		AdvertisementPayload advPayload = new AdvertisementPayload();
@@ -48,6 +68,14 @@ public class LocationManager implements LayerIFace {
 		
 	}
 
+	/**
+	 * Update the location entry of the indicated node
+	 * 
+	 * @param id alphanumeric BlueNet ID of the node to update
+	 * @param lat latitude
+	 * @param lon longitude
+	 * @return 0 if successful, negative otherwise
+	 */
 	private int updateLocation(String id, float lat, float lon) {
 		LocationEntry loc = mIDLocationTable.get(id);
 
@@ -62,6 +90,14 @@ public class LocationManager implements LayerIFace {
 		return 0;
 	}
 
+	/**
+	 * Update the location of a given node from a byte array containing
+	 * latitude and longitude as floats
+	 * 
+	 * @param id alphanumeric BlueNet ID of the node to update
+	 * @param message byte array containing latitude longitude as floats
+	 * @return 0 if successful, negative otherwise
+	 */
 	private int updateLocation(String id, byte[] message) {
 		byte [] latBytes = Arrays.copyOfRange(message,0,4);
 		byte [] lonBytes = Arrays.copyOfRange(message,4,8);
@@ -74,7 +110,11 @@ public class LocationManager implements LayerIFace {
 		return this.updateLocation(id, lat, lon);
 	}
 
-
+	/**
+	 * @param id alphanumeric BlueNet ID of the node to get a location for
+	 * @return the average coordinate of the given ID if known. (0,0) otherwise
+	 * @see Coordinate
+	 */
 	private Coordinate getLocation(String id) {
 		// provide location centroid of given node id
 		LocationEntry entry = mIDLocationTable.get(id);
@@ -97,7 +137,14 @@ public class LocationManager implements LayerIFace {
 		return coordAvg;
 	}
 
-	
+	/**
+	 * Determine whether this node is closer to the destination node than
+	 * the source node is
+	 * 
+	 * @param srcID alphanumeric BlueNet ID of the source node
+	 * @param destID alphanumeric BlueNet ID of the destination node
+	 * @return true if we are closer, false otherwise
+	 */
 	private boolean inDirection(String srcID, String destID) {
 		//used to answer query about whether this node is in the 
 		//correct direction
@@ -121,11 +168,26 @@ public class LocationManager implements LayerIFace {
 		return result;
 	}
 
+	/**
+	 * Determine whether we have enough location measurements to calculate a
+	 * position spread
+	 * 
+	 * @param id alphanumeric BlueNet ID of the node to check
+	 * @return true if we have at least 2 measurements, false otherwise
+	 */
 	private boolean sufficientData(String id) {
 		LocationEntry entry = mIDLocationTable.get(id);
 		return entry != null && entry.mCoordinates.size() >= 2;
 	}
 
+	/**
+	 * Calculate the spread (some sort of mean squared calculation) of the 
+	 * indicated node's locations
+	 * 
+	 * @param id alphanumeric BlueNet ID of the node
+	 * @return the means squared location spread if there are sufficient measurements
+	 * 		   0.0 otherwise.
+	 */
 	private float positionSpread(String id) {
 		float d = 0.0f;
 		if (sufficientData(id)) {
@@ -135,8 +197,10 @@ public class LocationManager implements LayerIFace {
 		return d;
 	}
 
+	/**
+	 * https://en.wikipedia.org/wiki/Mean_squared_displacement
+	 */
 	private float meanSquaredDisplacement(String id) {
-		//https://en.wikipedia.org/wiki/Mean_squared_displacement
 		LocationEntry entry = mIDLocationTable.get(id);
 		Coordinate c_0 = entry.mCoordinates.get(0);
 		float distanceSum = 0.0f;
@@ -150,8 +214,10 @@ public class LocationManager implements LayerIFace {
 		return distanceSum / entry.mCoordinates.size();
 	}
 
+	/**
+	 * https://en.wikipedia.org/wiki/Root-mean-square_deviation_of_atomic_positions
+	 */
 	private float rootMeanSquareDeviationAtomicPositions(String id) {
-		//https://en.wikipedia.org/wiki/Root-mean-square_deviation_of_atomic_positions
 		LocationEntry entry = mIDLocationTable.get(id);
 
 		Coordinate coordAvg = new Coordinate();
@@ -174,9 +240,10 @@ public class LocationManager implements LayerIFace {
 		return (float)sqrt(distanceSum / entry.mCoordinates.size());
 	}
 
+	/**
+	 * https://en.wikipedia.org/wiki/Root-mean-square_deviation
+	 */
 	private float rootMeanSquareDeviation(String id) {
-		//https://en.wikipedia.org/wiki/Root-mean-square_deviation
-
 		return 0.0f;
 	}
 
@@ -193,6 +260,14 @@ public class LocationManager implements LayerIFace {
 		mID = mQueryCB.ask("global.id");
 	}
 
+	/**
+	 * Check whether the incoming message is a location update. If so, update
+	 * the corresponding node's location. Pass the payload onto the next
+	 * layer of the stack
+	 * 
+	 * @param advPayload the payload to handle
+	 * @return result of read--0 if successful, negative otherwise
+	 */
 	public int read(AdvertisementPayload advPayload)
 	{
 		//System.out.println("Loc hit");
@@ -225,6 +300,20 @@ public class LocationManager implements LayerIFace {
 
 		return -1;
 	}
+
+	/**
+	 * Handle queries:
+	 * <p>-send location update
+	 * <p>-check if we're in the direction of the destination
+	 * <p>-get location of a node
+	 * <p>-get the position spread of a node
+	 * <p>-set our location
+	 * <p>-get a list of neighbor IDs
+	 * 
+	 * @param myQuery the query string
+	 * @return the result or answer string if the query is handled, empty
+	 * 		   String otherwise
+	 */
 	public String query(String myQuery)	{
 		String resultString = new String();
 
@@ -277,6 +366,16 @@ public class LocationManager implements LayerIFace {
 
 	//From: https://stackoverflow.com/questions/3694380/calculating-distance-between-two-points-using-latitude-longitude-what-am-i-doi
 
+	/**
+	 * Get the distance in meters between two coordinates
+	 * From <a href="https://stackoverflow.com/questions/3694380/calculating-distance-between-two-points-using-latitude-longitude-what-am-i-doi">here</a>
+	 * 
+	 * @param lat1 latitude of node 1
+	 * @param lon1 longitude of node 1
+	 * @param lat2 latitude of node 2
+	 * @param lon2 longitude of node 2
+	 * @return the distance in meters between the two points
+	 */
 	public static double distance(double lat1, double lon1, double lat2, double lon2) {
 		final int R = 6371; // Radius of the earth
 
