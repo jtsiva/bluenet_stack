@@ -12,23 +12,8 @@ import java.util.*;
  * @see Writer
  * @see Query
  */
-public class DummyBLE implements LayerIFace{
-	protected Reader mReadCB;
-	protected Writer mWriteCB;
-	protected Query mQueryCB;
-
-	public void setReadCB (Reader reader) {
-		this.mReadCB = reader;
-	}
-
-	public void setWriteCB (Writer writer) {
-		this.mWriteCB = writer;
-	}
-
-	public void setQueryCB (Query q) {
-		mQueryCB = q;
-	}
-
+public class DummyBLE extends LayerBase implements Reader, Writer, Query {
+	
 	/**
 	 * @param advPayload the payload to pass through to the next layer
 	 * @return 0 if successful, else error code
@@ -108,7 +93,7 @@ public class DummyBLE implements LayerIFace{
 	 * @param myQuery query to which this layer could respond
 	 * @return response to query if implemented, else empty String
 	 */
-	public String query(String myQuery) {
+	public String ask(String myQuery) {
 		String resultString = new String();
 
 		if (Objects.equals(myQuery, "tag")) {

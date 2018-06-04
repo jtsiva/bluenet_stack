@@ -22,27 +22,10 @@ import java.nio.charset.StandardCharsets;
  * @see GroupEntry
  * @see AdvertisementPayload
  */
-public class GroupManager implements LayerIFace{
+public class GroupManager extends LayerBase implements Reader, Query{
 	public long deleteThreshold = 30000L;//30 seconds (DEBUG)  //1800000L; //30 minutes
-	protected Reader mReadCB;
-	protected Writer mWriteCB;
-	protected Query mQueryCB;
 	private List<GroupEntry> mGroups = new ArrayList<GroupEntry>();
 	private Timestamp mLastUpdate = null;
-	private String mID; 
-
-	public void setReadCB (Reader reader) {
-		this.mReadCB = reader;
-	}
-
-	public void setWriteCB (Writer writer) {
-		this.mWriteCB = writer;
-	}
-
-	public void setQueryCB (Query q) {
-		mQueryCB = q;
-		mID = mQueryCB.ask("global.id");
-	}
 
 	/**
 	 * Handles the group table propagation/update protocol and determines
@@ -135,7 +118,7 @@ public class GroupManager implements LayerIFace{
 				newAdv.setSrcID(mID);
 				newAdv.setDestID(advPayload.getSrcID());
 				newAdv.setMsgType(AdvertisementPayload.GROUP_UPDATE);
-				String groupTable = query("getGroups");
+				String groupTable = ask("getGroups");
 				newAdv.setMsg(groupTable.getBytes(StandardCharsets.UTF_8));
 
 				mReadCB.read(newAdv);
@@ -214,25 +197,6 @@ public class GroupManager implements LayerIFace{
 	}
 
 	/**
-	 * @param advPayload
-	 * @throws UnsupportedOperationException
-	 */
-	public int write(AdvertisementPayload advPayload) {
-		//Used for group creation?
-		throw new java.lang.UnsupportedOperationException("Not supported.");
-	}
-
-	/**
-	 * @param dest
-	 * @param message
-	 * @throws UnsupportedOperationException
-	 */
-	public int write(String dest, byte[] message) {
-		//Used for group creation?
-		throw new java.lang.UnsupportedOperationException("Not supported.");
-	}
-
-	/**
 	 * Respond to query strings. Handles:
 	 *  <p>- checking whether we can join geographical group given a location update
 	 *  <p>- adding a group
@@ -244,7 +208,7 @@ public class GroupManager implements LayerIFace{
 	 * @return response if query understood/handled, empty String otherwise
 	 * @see GroupEntry
 	 */
-	public String query(String myQuery) {
+	public String ask(String myQuery) {
 		String resultString = new String();
 
 		String[] parts = myQuery.split("\\s+");
