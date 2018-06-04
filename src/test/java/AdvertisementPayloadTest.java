@@ -84,7 +84,7 @@ public class AdvertisementPayloadTest {
 
 		AdvertisementPayload adv = new AdvertisementPayload();
 		adv.setRetriever(new MessageRetriever () {
-			public byte[] retrieve() {
+			public byte[] retrieve(byte [] srcID) {
 				return msg;
 			}
 		});
