@@ -60,7 +60,7 @@ public class RoutingTest {
 
 	@Test
 	public void shouldGetTag() {
-		assertEquals("RouteMgr", mRouteMgr.query("tag"));
+		assertEquals("RouteMgr", mRouteMgr.ask("tag"));
 	}
 
 	@Test
