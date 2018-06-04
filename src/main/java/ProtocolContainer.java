@@ -21,7 +21,7 @@ import java.nio.charset.StandardCharsets;
 public class ProtocolContainer implements BlueNetIFace {
 	private Result mResultHandler = null;
 
-	private ArrayList<LayerIFace> mLayers = new ArrayList<>(); 
+	private ArrayList<LayerBase> mLayers = new ArrayList<>(); 
 	
 	private RoutingManager mRoute = new RoutingManager();
 	private GroupManager mGrp = new GroupManager();
@@ -89,16 +89,21 @@ public class ProtocolContainer implements BlueNetIFace {
 						resultString = mRandString.nextString();
 					}
 					else if (parts[QUERY].contains("setLocation")) { //maybe all other global queries are passed to everyone?
-						for (LayerIFace layer: mLayers) {
-							resultString = layer.query(parts[QUERY]);
+						for (LayerBase layer: mLayers) {
+							if (layer instanceof Query){
+								resultString = ((Query)layer).ask(parts[QUERY]);
+							}
 						}
 					}
 				}
 				else {
 
-					for (LayerIFace layer: mLayers) {
-						if (Objects.equals(parts[TAG], layer.query(TAG_Q))) {
-							resultString = layer.query(parts[QUERY]);
+					for (LayerBase layer: mLayers) {
+						if (layer instanceof Query){
+							if (Objects.equals(parts[TAG], ((Query)layer).ask(TAG_Q))) {
+								
+								resultString = ((Query)layer).ask(parts[QUERY]);
+							}
 						}
 					}
 				}
@@ -107,7 +112,7 @@ public class ProtocolContainer implements BlueNetIFace {
 			}
 		};
 
-		for (LayerIFace layer: mLayers) {
+		for (LayerBase layer: mLayers) {
 			layer.setQueryCB(mQuery);
 		}
 
@@ -119,53 +124,21 @@ public class ProtocolContainer implements BlueNetIFace {
 
 		//the dummy ble layer get AdvertisementPayloads and passes them to 
 		//the message layer
-		mBLE.setReadCB(new Reader() {
-			public int read(AdvertisementPayload advPayload) {
-				return mMsg.read(advPayload);
-			}
-
-			public int read(String src, byte[] message) {
-				return -1;
-			}
-		});
+		mBLE.setReadCB(mMsg);
 
 		//The message layer writes AdvertisementPayloads to the 
 		//dummy ble layer
-		mMsg.setWriteCB(new Writer() {
-			public int write(AdvertisementPayload advPayload) {
-				return mBLE.write(advPayload);
-			}
-			public int write(String dest, byte[] message) {
-				return -1;
-			}
-		});
+		mMsg.setWriteCB(mBLE);
 
 		//The message layer will hand off messages to this (the top layer) to be printed
 		//However, an AdvertisementPayload is passed up then it is sent to LocationManager
 		//to handle
-		mMsg.setReadCB(new Reader() {
-			public int read(String src, byte[] message) {
-				
-			    
-				return 0;
-			}
-
-			public int read(AdvertisementPayload advPayload) {
-				return mLoc.read(advPayload);
-			}
-		});
+		mMsg.setReadCB(mLoc);
 
 		//The location manager passes messages up the stack to the group manager
-		mLoc.setReadCB(new Reader() {
-			public int read(AdvertisementPayload advPayload) {
-				return mGrp.read(advPayload);
-			}
-			public int read(String src, byte[] message) {
-				return -1;
-			}
-		});
+		mLoc.setReadCB(mGrp);
 
-		//group manager hands to routing manager or all the way to 
+		//group manager hands to routing manager or all the way to result handler
 		mGrp.setReadCB(new Reader() {
 			public int read(AdvertisementPayload advPayload) {
 				return mRoute.read(advPayload);
@@ -192,14 +165,7 @@ public class ProtocolContainer implements BlueNetIFace {
 		});
 
 		//pass writes down to the message layer
-		mRoute.setWriteCB(new Writer() {
-			public int write(AdvertisementPayload advPayload) {
-				return mMsg.write(advPayload);
-			}
-			public int write(String dest, byte[] message) {
-				return mMsg.write(dest, message);
-			}
-		});
+		mRoute.setWriteCB(mMsg);
 
 
 	}
@@ -215,7 +181,7 @@ public class ProtocolContainer implements BlueNetIFace {
 
 	public int write(String destID, String input) {
 
-		int result = mLayers.get(0).write(destID, input.getBytes(StandardCharsets.UTF_8));
+		int result = ((Writer)mLayers.get(0)).write(destID, input.getBytes(StandardCharsets.UTF_8));
 
 		if (0 == result) {
 			result = input.length();

@@ -11,7 +11,9 @@ package nd.edu.bluenet_stack;
 public interface MessageRetriever {
 
 	/**
+	 * @param srcID the alphanumeric BlueNet ID of the device from which to
+	 *        fetch the data
 	 * @return the contents read from the message characteristic
 	 */
-	public byte[] retrieve();
+	public byte[] retrieve(byte [] srcID);
 }

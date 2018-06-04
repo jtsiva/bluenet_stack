@@ -156,7 +156,7 @@ public class GroupTest {
 
 	@Test
 	public void shouldReturnTag() {
-		assertEquals("GrpMgr", mGrpMgr.query("tag"));
+		assertEquals("GrpMgr", mGrpMgr.ask("tag"));
 	}
 
 	@Test
@@ -167,7 +167,7 @@ public class GroupTest {
 
 	@Test
 	public void shouldGetAddNamedGroupGetNon0ChkSum() {
-		mGrpMgr.query("addGroup blargity_blarg");
+		mGrpMgr.ask("addGroup blargity_blarg");
 		assertTrue(!(Arrays.equals(new byte[] {-1,-1},mGrpMgr.getChkSum())));
 	}
 
@@ -179,8 +179,8 @@ public class GroupTest {
 
 	@Test
 	public void shouldAddandGetBothGroupTypes() {
-		mGrpMgr.query("addGroup blargity_blarg");
-		mGrpMgr.query("addGroup 10.0 10.0 30.0");
+		mGrpMgr.ask("addGroup blargity_blarg");
+		mGrpMgr.ask("addGroup 10.0 10.0 30.0");
 		Group [] grps = mGrpMgr.getGroups();
 		int numFound = 0;
 
@@ -201,11 +201,11 @@ public class GroupTest {
 
 	@Test
 	public void shouldAddandJoinGroup() {
-		mGrpMgr.query("addGroup blargity_blarg");
+		mGrpMgr.ask("addGroup blargity_blarg");
 		Group [] grps = mGrpMgr.getGroups();
 
 		assertTrue(!grps[0].getStatus());
-		mGrpMgr.query("joinGroup 1110");
+		mGrpMgr.ask("joinGroup 1110");
 		grps = mGrpMgr.getGroups();
 
 		assertTrue(grps[0].getStatus());
@@ -262,7 +262,7 @@ public class GroupTest {
 
 	@Test
 	public void shouldCheckChkSumSendQueryNonEmptyGroupTable() {
-		mGrpMgr.query("addGroup blargity_blarg");
+		mGrpMgr.ask("addGroup blargity_blarg");
 		AdvertisementPayload advPayload = new AdvertisementPayload();
 		advPayload.setMsgType(AdvertisementPayload.LOCATION_UPDATE);
 		advPayload.setSrcID("2222");
@@ -294,7 +294,7 @@ public class GroupTest {
 
 	@Test
 	public void shouldCheckQueryTimestampSendGroupUpdateNamedGroup(){
-		mGrpMgr.query("addGroup blargity_blarg");
+		mGrpMgr.ask("addGroup blargity_blarg");
 		AdvertisementPayload advPayload = new AdvertisementPayload();
 		advPayload.setMsgType(AdvertisementPayload.GROUP_QUERY);
 		advPayload.setSrcID("2222");
@@ -314,7 +314,7 @@ public class GroupTest {
 
 	@Test
 	public void shouldCheckQueryTimestampSendGroupUpdateGeoGroup(){
-		mGrpMgr.query("addGroup 10.0 10.0 10.0");
+		mGrpMgr.ask("addGroup 10.0 10.0 10.0");
 		AdvertisementPayload advPayload = new AdvertisementPayload();
 		advPayload.setMsgType(AdvertisementPayload.GROUP_QUERY);
 		advPayload.setSrcID("2222");
@@ -375,7 +375,7 @@ public class GroupTest {
 
 	@Test
 	public void shouldIgnoreMessageBecauseGroupNotJoined() {
-		mGrpMgr.query("addGroup blargity_blarg");
+		mGrpMgr.ask("addGroup blargity_blarg");
 
 		//Send a message to the group
 		String msg = "hello world!";
@@ -391,8 +391,8 @@ public class GroupTest {
 
 	@Test
 	public void shouldGetMessageBecauseGroupJoined() {
-		mGrpMgr.query("addGroup blargity_blarg");
-		mGrpMgr.query("joinGroup 1110");
+		mGrpMgr.ask("addGroup blargity_blarg");
+		mGrpMgr.ask("joinGroup 1110");
 
 		//Send a message to the group
 		String msg = "hello world!";

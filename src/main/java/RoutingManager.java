@@ -11,27 +11,10 @@ import java.sql.Timestamp;
  * @author Josh Siva
  * @see LayerIFace
  */
-public class RoutingManager implements LayerIFace{
-	protected Reader mReadCB;
-	protected Writer mWriteCB;
-	protected Query mQueryCB;
-	private String mID;
+public class RoutingManager extends LayerBase implements Reader, Writer, Query{
 
 	protected HashMap<String, Timestamp> mFwdTimes = new HashMap<String, Timestamp>();
 	protected HashMap<String, List<String>> mLocalNodes = new HashMap<String, List<String>>();
-
-	public void setReadCB (Reader reader) {
-		mReadCB = reader;
-	}
-
-	public void setWriteCB (Writer writer) {
-		mWriteCB = writer;
-	}
-
-	public void setQueryCB (Query q) {
-		mQueryCB = q;
-		mID = mQueryCB.ask("global.id");
-	}
 
 	/**
 	 * Convenience function for applying a time-derived error model to a
@@ -231,7 +214,7 @@ public class RoutingManager implements LayerIFace{
 	 * @param myQuery question posed to layer
 	 * @return response or empty String if not handled
 	 */
-	public String query(String myQuery) {
+	public String ask(String myQuery) {
 		String resultString = new String();
 
 		String[] parts = myQuery.split("\\s+");

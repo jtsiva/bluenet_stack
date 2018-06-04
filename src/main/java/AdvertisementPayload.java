@@ -327,7 +327,7 @@ public class AdvertisementPayload {
      */
     public byte[] getMsg() {
         if (needRetriever) {
-            msg = msgRetriever.retrieve();// we need to go pull in the message
+            msg = msgRetriever.retrieve(this.srcID);// we need to go pull in the message
             //check length of msg against len in header to make sure we have valid data
             needRetriever = false;
         }

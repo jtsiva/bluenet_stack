@@ -18,22 +18,15 @@ import static java.lang.Math.sqrt;
  * @see Writer
  * @see Query
  */
-public class LocationManager implements LayerIFace {
+public class LocationManager extends LayerBase implements Reader, Query {
 	protected HashMap<String, LocationEntry> mIDLocationTable = null;
-	protected Reader mReadCB;
-	protected Writer mWriteCB;
-	protected Query mQueryCB;
-
-	private String mID;
+	
 
 	/**
 	 * Default constructor
 	 */
 	public LocationManager() {
 		mIDLocationTable = new HashMap<String, LocationEntry>();
-		mReadCB = null;
-		mWriteCB = null;
-		mQueryCB = null;
 	}
 
 	/**
@@ -247,19 +240,6 @@ public class LocationManager implements LayerIFace {
 		return 0.0f;
 	}
 
-	public void setReadCB (Reader reader) {
-		mReadCB = reader;
-	}
-
-	public void setWriteCB (Writer writer) {
-		mWriteCB = writer;
-	}
-
-	public void setQueryCB (Query q) {
-		mQueryCB = q;
-		mID = mQueryCB.ask("global.id");
-	}
-
 	/**
 	 * Check whether the incoming message is a location update. If so, update
 	 * the corresponding node's location. Pass the payload onto the next
@@ -287,18 +267,13 @@ public class LocationManager implements LayerIFace {
 		return result;
 	}
 
+	/**
+	 * @param src
+	 * @param message
+	 * @throws UnsupportedOperationException
+	 */
 	public int read(String src, byte[] message) {
-
-		return -1;
-	}
-	public int write(AdvertisementPayload advPayload)
-	{
-
-		return 0;
-	}
-	public int write(String dest, byte[] message){
-
-		return -1;
+		throw new java.lang.UnsupportedOperationException("Not supported.");
 	}
 
 	/**
@@ -314,7 +289,7 @@ public class LocationManager implements LayerIFace {
 	 * @return the result or answer string if the query is handled, empty
 	 * 		   String otherwise
 	 */
-	public String query(String myQuery)	{
+	public String ask(String myQuery)	{
 		String resultString = new String();
 
 		String[] parts = myQuery.split("\\s+");

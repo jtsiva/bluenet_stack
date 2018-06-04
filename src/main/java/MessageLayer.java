@@ -11,11 +11,9 @@ import java.util.*;
  * @see Reader
  * @see Writer
  */
-public class MessageLayer implements LayerIFace {
+public class MessageLayer extends LayerBase implements Reader, Writer, Query {
 	private final static int SMALL_MSG_MAX = 9;
-	protected Reader mReadCB;
-	protected Writer mWriteCB;
-	protected Query mQueryCB;
+
 	private byte mMsgIndex;
 
 	public int filterWindowSize = 126;
@@ -26,8 +24,6 @@ public class MessageLayer implements LayerIFace {
 	 * to 0. This will be incremented for each new outgoing message.
 	 */
 	public MessageLayer() {
-		mReadCB = null;
-		mWriteCB = null;
 		mMsgIndex = 0b0;
 	}
 
@@ -52,20 +48,6 @@ public class MessageLayer implements LayerIFace {
 
 		return false;
 	}
-
-
-	public void setReadCB (Reader reader) {
-		mReadCB = reader;
-	}
-
-	public void setWriteCB (Writer writer) {
-		mWriteCB = writer;
-	}
-
-	public void setQueryCB (Query q) {
-		mQueryCB = q;
-	}
-
 
 	/**
 	 * Check to make sure we haven't already seen the message.
@@ -167,7 +149,7 @@ public class MessageLayer implements LayerIFace {
 	 * @param myQuery the query
 	 * @return response to query or empty String if not handled
 	 */
-	public String query(String myQuery) {
+	public String ask(String myQuery) {
 		String resultString = new String();
 		if (Objects.equals(myQuery, "tag")) {
 			resultString = new String("MsgLayer");

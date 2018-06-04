@@ -57,12 +57,12 @@ public class LocationTest {
 
 	@Test
 	public void shouldReturnTag() {
-		assertEquals("LocMgr", mLocMgr.query("tag"));
+		assertEquals("LocMgr", mLocMgr.ask("tag"));
 	}
 
 	@Test
 	public void shouldReturn0ForLocation() {
-		String result = mLocMgr.query("getLocation 1111");
+		String result = mLocMgr.ask("getLocation 1111");
 		String[] coord = result.split("\\s+");
 
 		assertEquals(0.0, Float.parseFloat(coord[0]), 0.000001);
@@ -71,7 +71,7 @@ public class LocationTest {
 
 	@Test
 	public void shouldSendLocation() {
-		mLocMgr.query("sendLocation");
+		mLocMgr.ask("sendLocation");
 
 		byte[] message = mAdvPayload.getMsg();
 
@@ -88,7 +88,7 @@ public class LocationTest {
 
 	@Test
 	public void shouldSendLocationOnSet() {
-		mLocMgr.query("setLocation 10.0 10.0");
+		mLocMgr.ask("setLocation 10.0 10.0");
 
 		byte[] message = mAdvPayload.getMsg();
 
@@ -105,8 +105,8 @@ public class LocationTest {
 
 	@Test
 	public void shouldSetAndGetSimpleLocation() {
-		mLocMgr.query("setLocation 10.0 10.0");
-		String result = mLocMgr.query("getLocation 1111");
+		mLocMgr.ask("setLocation 10.0 10.0");
+		String result = mLocMgr.ask("getLocation 1111");
 
 		String[] coord = result.split("\\s+");
 
@@ -116,8 +116,8 @@ public class LocationTest {
 
 	@Test
 	public void shouldSetAndGetLocationRealLocation() {
-		mLocMgr.query("setLocation 41.6926321 -86.2445672");
-		String result = mLocMgr.query("getLocation 1111");
+		mLocMgr.ask("setLocation 41.6926321 -86.2445672");
+		String result = mLocMgr.ask("getLocation 1111");
 		//System.out.println(result);
 		
 		String[] coord = result.split("\\s+");
@@ -150,7 +150,7 @@ public class LocationTest {
 
 		mLocMgr.read(advPayload);
 
-		String result = mLocMgr.query("getLocation 2222");
+		String result = mLocMgr.ask("getLocation 2222");
 		//System.out.println(result);
 		
 		String[] coord = result.split("\\s+");
@@ -163,7 +163,7 @@ public class LocationTest {
 	public void shouldBeInDirection() {
 		//set location
 
-		mLocMgr.query("setLocation 41.6926321 -86.2445672");
+		mLocMgr.ask("setLocation 41.6926321 -86.2445672");
 
 		//send location update packets (as if from another node)
 
@@ -210,12 +210,12 @@ public class LocationTest {
 
 		mLocMgr.read(advPayload);
 
-		assertEquals("true", mLocMgr.query("inDirection " + a + " " + b));
+		assertEquals("true", mLocMgr.ask("inDirection " + a + " " + b));
 	}
 
 	@Test
 	public void shouldNotBeInDirection () {
-		mLocMgr.query("setLocation 41.715011 -86.250768");
+		mLocMgr.ask("setLocation 41.715011 -86.250768");
 
 		//send location update packets (as if from another node)
 
@@ -262,7 +262,7 @@ public class LocationTest {
 
 		mLocMgr.read(advPayload);
 
-		assertEquals("false", mLocMgr.query("inDirection " + a + " " + b));
+		assertEquals("false", mLocMgr.ask("inDirection " + a + " " + b));
 	}
 
 	@Test
@@ -310,7 +310,7 @@ public class LocationTest {
 
 		mLocMgr.read(advPayload);
 
-		String res = mLocMgr.query("getNeighbors");
+		String res = mLocMgr.ask("getNeighbors");
 		String[]parts = res.split("\\s+");
 		assertTrue(Objects.equals(parts[0], "2222") || Objects.equals(parts[1], "2222"));
 		assertTrue(Objects.equals(parts[0], "3333") || Objects.equals(parts[1], "3333"));
@@ -318,9 +318,9 @@ public class LocationTest {
 
 	@Test
 	public void shouldReturn0PositionSpreadWithNoPositionSet () {
-		//mLocMgr.query("setLocation 41.715011 -86.250768");
+		//mLocMgr.ask("setLocation 41.715011 -86.250768");
 
-		String result = mLocMgr.query("getPositionSpread 1111");
+		String result = mLocMgr.ask("getPositionSpread 1111");
 		//System.out.println(result);
 		
 		String[] res = result.split("\\s+");
@@ -331,9 +331,9 @@ public class LocationTest {
 
 	@Test
 	public void shouldReturn0PositionSpreadWithOnePositionSet () {
-		mLocMgr.query("setLocation 41.715011 -86.250768");
+		mLocMgr.ask("setLocation 41.715011 -86.250768");
 
-		String result = mLocMgr.query("getPositionSpread 1111");
+		String result = mLocMgr.ask("getPositionSpread 1111");
 		//System.out.println(result);
 		
 		String[] res = result.split("\\s+");
@@ -345,11 +345,11 @@ public class LocationTest {
 	@Test
 	public void shouldReturnPositionSpreadWithTwoLocs () {
 		//values based on estimation formula: https://gis.stackexchange.com/questions/2951/algorithm-for-offsetting-a-latitude-longitude-by-some-amount-of-meters
-		mLocMgr.query("setLocation 1.0 1.0");
-		mLocMgr.query("setLocation 1.0009 1.0");
+		mLocMgr.ask("setLocation 1.0 1.0");
+		mLocMgr.ask("setLocation 1.0009 1.0");
 
 		//NOTE: using meanSquaredDisplacemet
-		String result = mLocMgr.query("getPositionSpread 1111");
+		String result = mLocMgr.ask("getPositionSpread 1111");
 		//System.out.println(result);
 		
 		String[] res = result.split("\\s+");
@@ -361,18 +361,18 @@ public class LocationTest {
 	@Test
 	public void shouldReturnPositionSpreadWithFullWindow () {
 		//values based on estimation formula: https://gis.stackexchange.com/questions/2951/algorithm-for-offsetting-a-latitude-longitude-by-some-amount-of-meters
-		mLocMgr.query("setLocation 1.0 1.0");
-		mLocMgr.query("setLocation 1.0009 1.0"); //100*100
-		mLocMgr.query("setLocation 1.0009 0.999099"); //141.42*141.42
-		mLocMgr.query("setLocation 1.0 0.999099"); //100*100
-		mLocMgr.query("setLocation 1.0 1.0"); //0
+		mLocMgr.ask("setLocation 1.0 1.0");
+		mLocMgr.ask("setLocation 1.0009 1.0"); //100*100
+		mLocMgr.ask("setLocation 1.0009 0.999099"); //141.42*141.42
+		mLocMgr.ask("setLocation 1.0 0.999099"); //100*100
+		mLocMgr.ask("setLocation 1.0 1.0"); //0
 		//---------------------------------------------------------
 		//sum
 		//    /= 5
 		// ~8000
 
 		//NOTE: using meanSquaredDisplacemet
-		String result = mLocMgr.query("getPositionSpread 1111");
+		String result = mLocMgr.ask("getPositionSpread 1111");
 		//System.out.println(result);
 		
 		String[] res = result.split("\\s+");

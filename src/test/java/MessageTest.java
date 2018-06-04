@@ -51,7 +51,7 @@ public class MessageTest {
 
 	@Test
 	public void shouldGetTag() {
-		assertEquals("MsgLayer", msgL.query("tag"));
+		assertEquals("MsgLayer", msgL.ask("tag"));
 	}
 
 	@Test
