@@ -24,11 +24,16 @@ import java.nio.charset.StandardCharsets;
 
 public class AdvertisementPayload {
     public final static int SMALL_MESSAGE = 0x186A; //always a push
+    public final static String SMALL_MESSAGE_STR = "186a";
     public final static int REGULAR_MESSAGE = 0x1869; //push or pull based on size of advertisement
+    public final static String REGULAR_MESSAGE_STR = "1869";
     //public final static int REGULAR_PULL_MESSAGE = 0x186E;// pull option
     public final static int LOCATION_UPDATE = 0x1868; //always a push
+    public final static String LOCATION_UPDATE_STR = "1868";
     public final static int GROUP_UPDATE = 0x186B;
+    public final static String GROUP_UPDATE_STR = "186b";
     public final static int GROUP_QUERY = 0x186C;
+    public final static String GROUP_QUERY_STR = "186c";
     //public final static byte GROUP_REGISTER = 0x186D;
 
     public final static byte MAX_TTL = 0b111;
