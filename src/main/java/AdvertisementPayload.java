@@ -33,6 +33,8 @@ public class AdvertisementPayload {
 
     public final static byte MAX_TTL = 0b111;
 
+    public final static int HEADER_SIZE = 11;
+
 
     private byte[] srcID = null;
     private byte[] destID = null;
@@ -92,9 +94,12 @@ public class AdvertisementPayload {
      * message through a callback
      * 
      * @param bytes the byte array that we parse
+     * @return true if successfully parsed, false if there was an issue
      * @see MessageRetriever
      */
-    public void fromBytes(byte[] bytes) {
+    public boolean fromBytes(byte[] bytes) {
+        boolean parseSuccessful = true;
+
         byte[] srcID = Arrays.copyOfRange(bytes, 0, 4);
         byte[] destID = Arrays.copyOfRange(bytes, 4, 8);
         byte[] msgID = Arrays.copyOfRange(bytes, 8, 9);
@@ -111,13 +116,17 @@ public class AdvertisementPayload {
 
         this.len = Arrays.copyOfRange(bytes, 10, 11)[0];
 
-        if (11 < bytes.length) { //message was pushed
-            this.msg = Arrays.copyOfRange(bytes, 11, 11 + this.len);
+        if (this.len == bytes.length - HEADER_SIZE) { //message was pushed and it's all here
+            this.msg = Arrays.copyOfRange(bytes, HEADER_SIZE, HEADER_SIZE + this.len);
         }
-        else {
+        else if (this.len > 0 && bytes.length == HEADER_SIZE) {
             needRetriever = true; //we're going to pull the data when we need it
         }
+        else {
+            parseSuccessful = false;
+        }
 
+        return parseSuccessful;
     }
 
     /**
