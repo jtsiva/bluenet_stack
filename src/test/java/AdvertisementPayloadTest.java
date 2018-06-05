@@ -99,6 +99,50 @@ public class AdvertisementPayloadTest {
 	}
 
 	@Test
+	public void shouldParsePulledByteStringNoMsgRetriever() {
+		//CCCC, DDDD, 1, ttl=2, hp=1, len=8
+		byte [] data = new byte[] {(byte)0x43,(byte)0x43,(byte)0x43,(byte)0x43,(byte)0x44,(byte)0x44,(byte)0x44,(byte)0x44,(byte)0x01,(byte)0x50, (byte)0x08};
+	
+		// hello!!!
+		byte [] msg = new byte[] {(byte)0x68,(byte)0x65,(byte)0x6C,(byte)0x6C,(byte)0x6F,(byte)0x21,(byte)0x21,(byte)0x21};
+
+		AdvertisementPayload adv = new AdvertisementPayload();
+		
+		assertTrue(adv.fromBytes(data));
+
+		assertEquals("CCCC", new String(adv.getSrcID()));
+		assertEquals("DDDD", new String(adv.getDestID()));
+		assertEquals(1, adv.getMsgID());
+		assertEquals(2, adv.getTTL());
+		assertTrue(adv.isHighPriority());
+		assertEquals(null, adv.getMsg());
+	}
+
+	@Test
+	public void shouldParsePulledByteStringMsgWrongLength() {
+		//CCCC, DDDD, 1, ttl=2, hp=1, len=8
+		byte [] data = new byte[] {(byte)0x43,(byte)0x43,(byte)0x43,(byte)0x43,(byte)0x44,(byte)0x44,(byte)0x44,(byte)0x44,(byte)0x01,(byte)0x50, (byte)0x08};
+	
+		// hello!!!
+		byte [] msg = new byte[] {(byte)0x68,(byte)0x65,(byte)0x6C,(byte)0x6C,(byte)0x6F,(byte)0x21,(byte)0x21};
+
+		AdvertisementPayload adv = new AdvertisementPayload();
+		adv.setRetriever(new MessageRetriever () {
+			public byte[] retrieve(byte [] srcID) {
+				return msg;
+			}
+		});
+		assertTrue(adv.fromBytes(data));
+
+		assertEquals("CCCC", new String(adv.getSrcID()));
+		assertEquals("DDDD", new String(adv.getDestID()));
+		assertEquals(1, adv.getMsgID());
+		assertEquals(2, adv.getTTL());
+		assertTrue(adv.isHighPriority());
+		assertEquals(null, adv.getMsg());
+	}
+
+	@Test
 	public void shouldFailToParsePushedMessageShort() {
 		//CCCC, DDDD, 1, ttl=2, hp=1, len=8, hello!!!
 		byte [] data = new byte[] {(byte)0x43,(byte)0x43,(byte)0x43,(byte)0x43,(byte)0x44,(byte)0x44,(byte)0x44,(byte)0x44,(byte)0x01,(byte)0x50, (byte)0x08,(byte)0x68,(byte)0x65,(byte)0x6C,(byte)0x6C,(byte)0x6F,(byte)0x21,(byte)0x21};

@@ -336,9 +336,24 @@ public class AdvertisementPayload {
      */
     public byte[] getMsg() {
         if (needRetriever) {
-            msg = msgRetriever.retrieve(this.srcID);// we need to go pull in the message
-            //check length of msg against len in header to make sure we have valid data
-            needRetriever = false;
+            if (null == msgRetriever) {
+                msg = null;
+            }
+            else{
+                msg = msgRetriever.retrieve(this.srcID);// we need to go pull in the message
+                
+                //if we pull a message that doesn't match the size we expect
+                //then we should should just give up and set msg to null.
+                //This could happen if the characteristic is changed between
+                //when we got the header and when we read the message
+                if (this.len != msg.length) {
+                    msg = null;
+                }
+            
+                needRetriever = false;
+            }
+
+           
         }
 
         return msg;
