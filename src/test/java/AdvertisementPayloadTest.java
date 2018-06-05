@@ -64,7 +64,7 @@ public class AdvertisementPayloadTest {
 		byte [] data = new byte[] {(byte)0x43,(byte)0x43,(byte)0x43,(byte)0x43,(byte)0x44,(byte)0x44,(byte)0x44,(byte)0x44,(byte)0x01,(byte)0x50, (byte)0x08,(byte)0x68,(byte)0x65,(byte)0x6C,(byte)0x6C,(byte)0x6F,(byte)0x21,(byte)0x21,(byte)0x21};
 	
 		AdvertisementPayload adv = new AdvertisementPayload();
-		adv.fromBytes(data);
+		assertTrue(adv.fromBytes(data));
 
 		assertEquals("CCCC", new String(adv.getSrcID()));
 		assertEquals("DDDD", new String(adv.getDestID()));
@@ -88,7 +88,7 @@ public class AdvertisementPayloadTest {
 				return msg;
 			}
 		});
-		adv.fromBytes(data);
+		assertTrue(adv.fromBytes(data));
 
 		assertEquals("CCCC", new String(adv.getSrcID()));
 		assertEquals("DDDD", new String(adv.getDestID()));
@@ -96,6 +96,24 @@ public class AdvertisementPayloadTest {
 		assertEquals(2, adv.getTTL());
 		assertTrue(adv.isHighPriority());
 		assertEquals("hello!!!", new String(adv.getMsg()));
+	}
+
+	@Test
+	public void shouldFailToParsePushedMessageShort() {
+		//CCCC, DDDD, 1, ttl=2, hp=1, len=8, hello!!!
+		byte [] data = new byte[] {(byte)0x43,(byte)0x43,(byte)0x43,(byte)0x43,(byte)0x44,(byte)0x44,(byte)0x44,(byte)0x44,(byte)0x01,(byte)0x50, (byte)0x08,(byte)0x68,(byte)0x65,(byte)0x6C,(byte)0x6C,(byte)0x6F,(byte)0x21,(byte)0x21};
+	
+		AdvertisementPayload adv = new AdvertisementPayload();
+		assertTrue(!adv.fromBytes(data));
+	}
+
+	@Test
+	public void shouldFailToParsePushedMessageLarge() {
+		//CCCC, DDDD, 1, ttl=2, hp=1, len=8, hello!!!
+		byte [] data = new byte[] {(byte)0x43,(byte)0x43,(byte)0x43,(byte)0x43,(byte)0x44,(byte)0x44,(byte)0x44,(byte)0x44,(byte)0x01,(byte)0x50, (byte)0x08,(byte)0x68,(byte)0x65,(byte)0x6C,(byte)0x6C,(byte)0x6F,(byte)0x21,(byte)0x21,(byte)0x21,(byte)0x21};
+	
+		AdvertisementPayload adv = new AdvertisementPayload();
+		assertTrue(!adv.fromBytes(data));
 	}
 
 	@Test
@@ -121,7 +139,7 @@ public class AdvertisementPayloadTest {
 		System.arraycopy(tmpA, 0, all, 0, tmpA.length);
 		System.arraycopy(tmpB, 0, all, tmpA.length, tmpB.length);
 
-		payload.fromBytes(all);
+		assertTrue(payload.fromBytes(all));
 
 		//System.out.println(String.valueOf(payload.getMsgLength()));
 
