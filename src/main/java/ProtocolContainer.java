@@ -201,8 +201,14 @@ public class ProtocolContainer implements BlueNetIFace {
 		return ids;
 	}
 
-	public String getLocation(String id) {
-		return mQuery.ask("LocMgr.getLocation " + id);
+	public void setLocation(float latitude, float longitude) {
+		mQuery.ask("global.setLocation " + String.valueOf(latitude) + " " + String.valueOf(longitude));
+	}
+
+	public Coordinate getLocation(String id) { 
+		String queryRes = mQuery.ask("LocMgr.getLocation " + id);
+		String[] parts = queryRes.split("\\s+");
+		return new Coordinate(Float.parseFloat(parts[0]), Float.parseFloat(parts[1]));
 	}
 
 	public Group [] getGroups()	{

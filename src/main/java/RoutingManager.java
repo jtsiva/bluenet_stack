@@ -163,8 +163,13 @@ public class RoutingManager extends LayerBase implements Reader, Writer, Query{
 					//check inDirection
 					//check traffic volume
 					//check neighbors' direction
+					
 					// make sure to pull the message
+					advPayload.getMsg();
 					//forward if we are eligible
+					
+					//using pull-based by default
+					advPayload.push = false;
 					retVal = mWriteCB.write(advPayload);
 				}
 			}
