@@ -117,6 +117,8 @@ public class ProtocolContainer implements BlueNetIFace {
 		}
 
 		connectLayers();
+
+		mMsg.ask("allowFromSelf");
 	}
 
 	private void connectLayers() {
