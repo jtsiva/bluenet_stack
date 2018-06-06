@@ -54,6 +54,7 @@ public class AdvertisementPayload {
 
     private MessageRetriever msgRetriever = null;
     private boolean needRetriever = false;
+    public boolean push = true;
 
     /**
      * Override the equals operator so that payloads can be compared for

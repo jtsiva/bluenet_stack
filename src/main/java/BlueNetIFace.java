@@ -34,14 +34,20 @@ public interface BlueNetIFace {
     * @return array of BlueNet IDs of all discovered devices in the network
     * @see LocationManager
     */
-   public String[] getNeighbors(); 
+   public String[] getNeighbors();
+
+   /**
+    * @param latitude  current latitude of this device
+    * @param longitude current longitude of this device
+    */
+   public void setLocation(float latitude, float longitude); 
    
    /**
     * @param id alphanumeric BlueNet ID of device whose location you want
-    * @return the average location of the device (as lat lon) or 0.0 0.0 if location not known
+    * @return the average location of the device or (0.0, 0.0) if location not known
     * @see LocationManager
     */
-   public String getLocation(String id); // returns average location of id (as: lat lon), or 0.0 0.0 if id does not exist
+   public Coordinate getLocation(String id); 
 
    //Group operations
 
