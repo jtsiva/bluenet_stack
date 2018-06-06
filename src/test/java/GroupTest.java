@@ -405,4 +405,17 @@ public class GroupTest {
 		assertEquals(advPayload, mAdvPayloads.get(0));
 		assertEquals(msg, mMessage);
 	}
+
+	@Test
+	public void shouldGetBroadcastMessage() {
+		String msg = "hello world!";
+		AdvertisementPayload advPayload = new AdvertisementPayload();
+		advPayload.setMsgType(AdvertisementPayload.REGULAR_MESSAGE);
+		advPayload.setSrcID("2222");
+		advPayload.setDestID("0000");
+		advPayload.setMsg(msg.getBytes(StandardCharsets.UTF_8));
+		mGrpMgr.read(advPayload);
+		assertEquals(advPayload, mAdvPayloads.get(0));
+		assertEquals(msg, mMessage);
+	}
 }

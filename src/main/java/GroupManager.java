@@ -176,7 +176,8 @@ public class GroupManager extends LayerBase implements Reader, Query{
 			}
 
 			// we belong to the group to which the message was addressed!
-			if (found) {
+			// we always belong to the broadcast group
+			if (found || Objects.equals(Group.BROADCAST_GROUP, new String(advPayload.getDestID()))) {
 				mReadCB.read(new String(advPayload.getSrcID()), advPayload.getMsg());
 			}
 		}
