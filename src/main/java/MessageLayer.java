@@ -18,6 +18,7 @@ public class MessageLayer extends LayerBase implements Reader, Writer, Query {
 
 	public int filterWindowSize = 126;
 	private ArrayList<AdvertisementPayload> mWindow = new ArrayList<>(); 
+	private boolean mAllowFromSelf = false;
 
 	/**
 	 * Default constructor. Set msg ID (to be assigned to outgoing messages)
@@ -58,18 +59,20 @@ public class MessageLayer extends LayerBase implements Reader, Writer, Query {
 	public int read(AdvertisementPayload advPayload) {
 
 		//System.out.println("ML hit");
-		if (isNew(advPayload)) { //no repeats!
+		if (isNew(advPayload)) {//no repeats!
+			if (mAllowFromSelf || !Objects.equals(mID, new String(advPayload.getSrcID()))) { 
+				// We could allow this sort of short circuiting type of message passing, but we wouldn't be
+				// able to capture complete network statistics at the routing layer then.
 
-			// We could allow this sort of short circuiting type of message passing, but we wouldn't be
-			// able to capture complete network statistics at the routing layer then.
-
-			// if (advPayload.getMsgType() == AdvertisementPayload.SMALL_MESSAGE 
-			// 	|| advPayload.getMsgType() == AdvertisementPayload.REGULAR_MESSAGE) { //correct type!
-			// 	return mReadCB.read(new String(advPayload.getSrcID()), advPayload.getMsg());
-			// }
-			// else {
-				return mReadCB.read(advPayload);
-			//}
+				// if (advPayload.getMsgType() == AdvertisementPayload.SMALL_MESSAGE 
+				// 	|| advPayload.getMsgType() == AdvertisementPayload.REGULAR_MESSAGE) { //correct type!
+				// 	return mReadCB.read(new String(advPayload.getSrcID()), advPayload.getMsg());
+				// }
+				// else {
+					return mReadCB.read(advPayload);
+				//}
+			}
+			
 		}
 		
 		return 0; //even though we're ignoring the message, it's not an error so return 0
@@ -153,6 +156,9 @@ public class MessageLayer extends LayerBase implements Reader, Writer, Query {
 		String resultString = new String();
 		if (Objects.equals(myQuery, "tag")) {
 			resultString = new String("MsgLayer");
+		}
+		else if (Objects.equals(myQuery, "allowFromSelf")) {
+			mAllowFromSelf = true;
 		}
 
 		return resultString;

@@ -118,7 +118,7 @@ public class MessageTest {
 	@Test
 	public void shouldAcceptSameSrcDiffMsgID() {
 		AdvertisementPayload advPayload = new AdvertisementPayload();
-		advPayload.setSrcID(MY_ID);
+		advPayload.setSrcID("2222");
 		advPayload.setMsgID((byte)0);
 		msgL.read(advPayload);
 		advPayload.setMsgID((byte)1);
@@ -130,7 +130,7 @@ public class MessageTest {
 	@Test
 	public void shouldAcceptSameMsgIDDiffSrc() {
 		AdvertisementPayload advPayload = new AdvertisementPayload();
-		advPayload.setSrcID(MY_ID);
+		advPayload.setSrcID("3333");
 		advPayload.setMsgID((byte)0);
 		msgL.read(advPayload);
 		advPayload.setSrcID("2222");
@@ -144,11 +144,11 @@ public class MessageTest {
 		AdvertisementPayload advPayload = new AdvertisementPayload();
 		AdvertisementPayload advPayload2 = new AdvertisementPayload();
 		String msg = "hello";
-		advPayload.setSrcID(MY_ID);
+		advPayload.setSrcID("2222");
 		advPayload.setMsgID((byte)0);
 		advPayload.setMsg(msg.getBytes());
 		msgL.read(advPayload);
-		advPayload2.setSrcID(MY_ID);
+		advPayload2.setSrcID("2222");
 		advPayload2.setMsgID((byte)0);
 		msg = "world";
 		advPayload2.setMsg(msg.getBytes());
@@ -159,11 +159,21 @@ public class MessageTest {
 	}
 
 	@Test
+	public void shouldRejectFromSelf() {
+		AdvertisementPayload advPayload = new AdvertisementPayload();
+		advPayload.setSrcID(MY_ID);
+		advPayload.setMsgID((byte)0);
+		msgL.read(advPayload);
+		
+		assertEquals(null, mAdvPayload);
+	}
+
+	@Test
 	public void shouldAcceptSameOutsideFilterRange() {
 
 		for (int i = 0; i <= msgL.filterWindowSize; i++) {
 			AdvertisementPayload advPayload = new AdvertisementPayload();
-			advPayload.setSrcID(MY_ID);
+			advPayload.setSrcID("2222");
 			advPayload.setMsgID((byte)(i % msgL.filterWindowSize));
 			advPayload.setMsg(new byte[] {(byte)(i % msgL.filterWindowSize)});
 			msgL.read(advPayload);
