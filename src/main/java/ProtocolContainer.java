@@ -19,19 +19,19 @@ import java.nio.charset.StandardCharsets;
  * @see RandomString
  */
 public class ProtocolContainer implements BlueNetIFace {
-	private Result mResultHandler = null;
+	protected Result mResultHandler = null;
 
-	private ArrayList<LayerBase> mLayers = new ArrayList<>(); 
+	protected ArrayList<LayerBase> mLayers = new ArrayList<>(); 
 	
-	private RoutingManager mRoute = new RoutingManager();
-	private GroupManager mGrp = new GroupManager();
-	private LocationManager mLoc = new LocationManager();
-	private MessageLayer mMsg = new MessageLayer();
-	private DummyBLE mBLE = new DummyBLE();
+	protected RoutingManager mRoute = new RoutingManager();
+	protected GroupManager mGrp = new GroupManager();
+	protected LocationManager mLoc = new LocationManager();
+	protected MessageLayer mMsg = new MessageLayer();
+	protected DummyBLE mBLE = new DummyBLE();
 
-	private Query mQuery;
-	private RandomString mRandString = new RandomString(4);
-	private String mID;
+	protected Query mQuery;
+	protected RandomString mRandString = new RandomString(4);
+	protected String mID;
 
 	/**
 	 * Initialize the ProtocolContainer by add all of the layers to an 
@@ -48,14 +48,35 @@ public class ProtocolContainer implements BlueNetIFace {
 	 * 
 	 */
 	public ProtocolContainer () {
+		setupLayers();
+
+		mID = mRandString.nextString();
+
+		setupQuery();
+
+		connectLayers();
+	}
+
+	/**
+	 * Add the basic layers into the layers arraylist. Also set the message
+	 * layer to allow from self so that messages can be bounced back through
+	 * the dummy BLE layer
+	 */
+	protected void setupLayers() {
 		mLayers.add(mRoute);
 		mLayers.add(mGrp);
 		mLayers.add(mLoc);
 		mLayers.add(mMsg);
 		mLayers.add(mBLE);
 
-		mID = mRandString.nextString();
+		mMsg.ask("allowFromSelf");
+	}
 
+	/**
+	 * Set up the main query handler. This really shouldn't need to be
+	 * changed.
+	 */
+	protected void setupQuery () {
 		mQuery = new Query() {
 			public String ask(String question) {
 				final String TAG_Q = "tag";
@@ -115,13 +136,12 @@ public class ProtocolContainer implements BlueNetIFace {
 		for (LayerBase layer: mLayers) {
 			layer.setQueryCB(mQuery);
 		}
-
-		connectLayers();
-
-		mMsg.ask("allowFromSelf");
 	}
 
-	private void connectLayers() {
+	/**
+	 * Connect the different layers of the stack together through callbacks.
+	 */
+	protected void connectLayers() {
 		//Connect the layers together
 
 		//the dummy ble layer get AdvertisementPayloads and passes them to 
@@ -235,18 +255,4 @@ public class ProtocolContainer implements BlueNetIFace {
 		return Objects.equals("ok", res);
 	}
 
-	//************************************************
-	//Other functions that need to taken care of here:
-	//--periodically updating this devices location
-	//************************************************
-
-	private void updateLocation() {
-		//get location from Android Location Services
-		double lat = 0.0;
-		double lon = 0.0;
-
-		String res = mQuery.ask("global.setLocation " + String.valueOf(lat) + " " + String.valueOf(lon));
-	}
-
-	
 }
