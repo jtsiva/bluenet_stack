@@ -317,6 +317,72 @@ public class LocationTest {
 	}
 
 	@Test
+	public void shouldReturnEmptyNeighborsNothingSet() {
+		String res = mLocMgr.ask("getNeighbors");
+		assertEquals(null, res);
+	}
+
+	@Test
+	public void shouldReturnEmptyNeighborsMeSetSet() {
+		mLocMgr.ask("setLocation 41.715011 -86.250768");
+		String res = mLocMgr.ask("getNeighbors");
+		assertEquals(null, res);
+	}
+
+	@Test
+	public void shouldOnlyGetNeighbors() {
+		mLocMgr.ask("setLocation 41.715011 -86.250768");
+
+		String a = "2222";
+		String b = "3333";
+
+		AdvertisementPayload advPayload = new AdvertisementPayload();
+
+		float latitude = 41.703799f;
+		float longitude = -86.239010f;
+		byte[] lat = ByteBuffer.allocate(4).putFloat(latitude).array();
+		byte[] lon = ByteBuffer.allocate(4).putFloat(longitude).array();
+
+		byte[] allBytes = new byte[lat.length + lon.length+2];
+		System.arraycopy(lat, 0, allBytes,0,lat.length);
+		System.arraycopy(lon, 0, allBytes,lat.length,lon.length);
+
+		//msg.fromBytes(allBytes);
+		advPayload.setMsg (allBytes);
+		advPayload.setMsgType(AdvertisementPayload.LOCATION_UPDATE);
+		advPayload.setSrcID(a);
+		advPayload.setDestID(Group.BROADCAST_GROUP);
+		advPayload.setMsgID((byte)0b0);
+
+		mLocMgr.read(advPayload);
+
+
+		advPayload = new AdvertisementPayload();
+		latitude = 41.681207f;
+		longitude = -86.228968f;
+		lat = ByteBuffer.allocate(4).putFloat(latitude).array();
+		lon = ByteBuffer.allocate(4).putFloat(longitude).array();
+
+		
+		System.arraycopy(lat, 0, allBytes,0,lat.length);
+		System.arraycopy(lon, 0, allBytes,lat.length,lon.length);
+
+		//msg.fromBytes(allBytes);
+		advPayload.setMsg (allBytes);
+		advPayload.setMsgType(AdvertisementPayload.LOCATION_UPDATE);
+		advPayload.setSrcID(b);
+		advPayload.setDestID(Group.BROADCAST_GROUP);
+		advPayload.setMsgID((byte)0b0);
+
+		mLocMgr.read(advPayload);
+
+		String res = mLocMgr.ask("getNeighbors");
+		String[]parts = res.split("\\s+");
+		assertTrue(Objects.equals(parts[0], "2222") || Objects.equals(parts[1], "2222"));
+		assertTrue(Objects.equals(parts[0], "3333") || Objects.equals(parts[1], "3333"));
+	}
+
+	@Test
 	public void shouldReturn0PositionSpreadWithNoPositionSet () {
 		//mLocMgr.ask("setLocation 41.715011 -86.250768");
 

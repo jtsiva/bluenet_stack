@@ -290,7 +290,7 @@ public class LocationManager extends LayerBase implements Reader, Query {
 	 * 		   String otherwise
 	 */
 	public String ask(String myQuery)	{
-		String resultString = new String();
+		String resultString = null;
 
 		String[] parts = myQuery.split("\\s+");
 
@@ -331,7 +331,12 @@ public class LocationManager extends LayerBase implements Reader, Query {
 		}
 		else if (Objects.equals(parts[0], "getNeighbors")) {
 			for ( String key : mIDLocationTable.keySet() ) {
-				resultString += key + " ";
+				if (!Objects.equals(key, mID)) {
+					if (null == resultString) {
+						resultString = new String();
+					}
+					resultString += key + " ";
+				}
 			}
 		}
 		
