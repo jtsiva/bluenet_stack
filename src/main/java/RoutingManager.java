@@ -29,7 +29,15 @@ public class RoutingManager extends LayerBase implements Reader, Writer, Query{
 	 * 		   errors
 	 */
 	private float applyError(float d, Timestamp lastForward) {
-		return d; //no time-derived error applied
+		if (null != lastForward) {
+			long timeDiff = System.currentTimeMillis() - lastForward.getTime();
+
+			float seconds = timeDiff / 1000.0f;
+
+			d = d + (seconds * .5f); //increase the spread by .5m each second
+		}
+
+		return d;
 	}
 
 	/**
