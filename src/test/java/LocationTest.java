@@ -446,4 +446,82 @@ public class LocationTest {
 		assertEquals(8000.0f, Float.parseFloat(res[0]), 50.0);
 
 	}
+
+	@Test
+	public void shouldNotDeleteNeighbor() {
+		String a = "2222";
+
+		AdvertisementPayload advPayload = new AdvertisementPayload();
+
+		float latitude = 41.703799f;
+		float longitude = -86.239010f;
+		byte[] lat = ByteBuffer.allocate(4).putFloat(latitude).array();
+		byte[] lon = ByteBuffer.allocate(4).putFloat(longitude).array();
+
+		byte[] allBytes = new byte[lat.length + lon.length+2];
+		System.arraycopy(lat, 0, allBytes,0,lat.length);
+		System.arraycopy(lon, 0, allBytes,lat.length,lon.length);
+
+		//msg.fromBytes(allBytes);
+		advPayload.setMsg (allBytes);
+		advPayload.setMsgType(AdvertisementPayload.LOCATION_UPDATE);
+		advPayload.setSrcID(a);
+		advPayload.setDestID(Group.BROADCAST_GROUP);
+		advPayload.setMsgID((byte)0b0);
+
+		mLocMgr.read(advPayload);
+
+		mLocMgr.ask("cleanNeighbors 10000");
+		String res = mLocMgr.ask("getNeighbors");
+
+		String[] ids = null;
+        if (null != res) {
+            ids = res.split("\\s+");
+        }
+
+        assertTrue(0 < ids.length);
+	}
+
+	@Test
+	public void shouldDeleteNeighbor() {
+		String a = "2222";
+
+		AdvertisementPayload advPayload = new AdvertisementPayload();
+
+		float latitude = 41.703799f;
+		float longitude = -86.239010f;
+		byte[] lat = ByteBuffer.allocate(4).putFloat(latitude).array();
+		byte[] lon = ByteBuffer.allocate(4).putFloat(longitude).array();
+
+		byte[] allBytes = new byte[lat.length + lon.length+2];
+		System.arraycopy(lat, 0, allBytes,0,lat.length);
+		System.arraycopy(lon, 0, allBytes,lat.length,lon.length);
+
+		//msg.fromBytes(allBytes);
+		advPayload.setMsg (allBytes);
+		advPayload.setMsgType(AdvertisementPayload.LOCATION_UPDATE);
+		advPayload.setSrcID(a);
+		advPayload.setDestID(Group.BROADCAST_GROUP);
+		advPayload.setMsgID((byte)0b0);
+
+		mLocMgr.read(advPayload);
+		try {                 
+			Thread.sleep(150);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+
+		mLocMgr.ask("cleanNeighbors 100");
+
+		mLocMgr.ask("getNeighbors");
+
+		String res = mLocMgr.ask("getNeighbors");
+
+		String[] ids = new String[0];
+        if (null != res) {
+            ids = res.split("\\s+");
+        }
+
+        assertEquals (0, ids.length);
+	}
 }

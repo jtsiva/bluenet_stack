@@ -339,6 +339,15 @@ public class LocationManager extends LayerBase implements Reader, Query {
 				}
 			}
 		}
+		else if (Objects.equals(parts[0], "cleanNeighbors")) {
+			long timeout = Long.parseLong(parts[1]);
+			for ( Map.Entry<String, LocationEntry> entry : mIDLocationTable.entrySet() ) {
+				if (timeout < System.currentTimeMillis() - entry.getValue().mTimestamp.getTime()) {
+					mIDLocationTable.remove(entry.getKey());
+				}
+			}
+		}
+
 		
 
 		return resultString;
